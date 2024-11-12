@@ -236,3 +236,40 @@ def test_move_robber() -> None:
 
     board.place_settlement(player1, 5)
     assert board.move_robber(2) == [player1]
+
+
+@pytest.mark.board
+def test_possible_branch_vertices() -> None:
+    def setup_board(*roads: int) -> tuple[Board, Player]:
+        player1 = Player(1, "red")
+        board = Board()
+        for road in roads:
+            board.place_road(player1, road)
+        return board, player1
+
+    board, player1 = setup_board(0, 1, 2, 3, 4, 5, 7)
+    assert sorted(board.get_possible_branch_vertices(player1)) == [0, 4, 6, 10]
+
+    board, player1 = setup_board(0, 1, 7, 12, 11, 6)
+    assert sorted(board.get_possible_branch_vertices(player1)) == [2, 8, 9, 10]
+
+    board, player1 = setup_board(25, 26, 27, 65, 71)
+    assert sorted(board.get_possible_branch_vertices(player1)) == [
+        18,
+        19,
+        20,
+        21,
+        45,
+        52,
+    ]
+
+    board, player1 = setup_board(25, 26, 27, 65, 71)
+    player2 = Player(2, "blue")
+    board.place_settlement(player2, 18)
+    board.place_settlement(player2, 45)
+    assert sorted(board.get_possible_branch_vertices(player1)) == [
+        19,
+        20,
+        21,
+        52,
+    ]

@@ -149,6 +149,9 @@ class Board:
     def get_hexes(self) -> list[Hex]:
         return self.hexes
 
+    def shortest_path(self, player: "Player", vertexLoc: int) -> list[Edge]:
+        return []
+
     def longest_road(self, player: "Player") -> int:
         player_roads = [road for road in player.roads if road.position is not None]
         player_roads.sort(key=lambda road: road.get_num_branches(self), reverse=True)
@@ -292,11 +295,30 @@ class Board:
                     return False
         return True
 
+    def get_edge(self, road: "Road") -> Edge:
+        edgeLoc = road.position
+        if edgeLoc is None:
+            raise ValueError("Edge location is None")
+        return self.edges[edgeLoc]
+
+    def get_possible_branch_vertices(self, player: "Player") -> list[int]:
+        """Return a list of possible branch vertices for a player"""
+        player_roads = [road for road in player.roads if road.position is not None]
+
+        vertices = set()
+        for road in player_roads:
+            edge = self.get_edge(road)
+            vertices = vertices.union(edge.vertices())
+        return [
+            v.id
+            for v in vertices
+            if (v.piece is None or v.piece.player == player)
+            and any([v.piece is None for v in v.connected_edges()])
+        ]
+
     def possible_settlement_locations(self, player: "Player") -> list[int]:
         """Return a list of possible settlement locations for a player"""
         player_roads = [road for road in player.roads if road.position is not None]
-
-        print(player_roads)
 
         def get_edge(road: "Road") -> Edge:
             edgeLoc = road.position

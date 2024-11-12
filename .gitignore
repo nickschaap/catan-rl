@@ -5,3 +5,4 @@ htmlcov/
 .pytest_cache/
 .DS_Store
 .vscode/
+current.svg

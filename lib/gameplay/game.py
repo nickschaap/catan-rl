@@ -24,7 +24,7 @@ INITIAL_PLACEMENTS = {
     },
     2: {
         "settlement": [35, 19],
-        "road": [19, 37],
+        "road": [25, 37],
         "resources": [ResourceType.WHEAT, ResourceType.WOOD, ResourceType.BRICK],
     },
     3: {
