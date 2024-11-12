@@ -1,0 +1,11 @@
+numpy
+fastapi
+uvicorn
+setuptools
+logging
+pydantic
+websockets
+pytest
+pytest-cov
+pyright
+ruff

@@ -1,0 +1,126 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "project"
+version = "0.1"
+
+[tool.pyright]
+include = ["**/lib"]
+exclude = []
+venvPath = "."
+venv = "venv"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownVariableType = "none"
+reportMissingTypeArgument = "none"
+reportMissingTypeStubs = "none"
+reportUnusedExpression = "none"
+reportUnknownLambdaType = "none"
+reportIncompatibleMethodOverride = "none"
+reportPrivateUsage = "none"
+reportMissingParameterType = "error"
+
+[tool.pytest.ini_options]
+markers = [
+    "hex",
+    "dice",
+    "board",
+    "pieces",
+    "bank",
+    "game",
+    "player"
+]
+addopts = "--cov=lib --cov-report=html"
+
+
+[tool.coverage.run]
+source = ["lib"]
+
+[tool.ruff]
+
+exclude = [
+    ".git",
+    "__pycache__",
+    "old,build",
+    "dist",
+]
+
+lint.ignore = [
+    "D102",
+    "ANN101",
+    "ANN401",
+    "N801",
+    "E203",
+    "E266",
+    "E501",
+    "E741",
+    "N803",
+    "N802",
+    "N806",
+    "D400",
+    "D401",
+    "D105",
+    "D415",
+    "D402",
+    "D205",
+    "D100",
+    "D101",
+    "D107",
+    "D213",
+    "ANN204",
+    "ANN102",
+]
+lint.select = ["D", "E", "F", "N", "ANN"]
+lint.fixable = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "I",
+    "N",
+    "Q",
+    "S",
+    "T",
+    "W",
+    "ANN",
+    "ARG",
+    "BLE",
+    "COM",
+    "DJ",
+    "DTZ",
+    "EM",
+    "ERA",
+    "EXE",
+    "FBT",
+    "ICN",
+    "INP",
+    "ISC",
+    "NPY",
+    "PD",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "SLF",
+    "TCH",
+    "TID",
+    "TRY",
+    "UP",
+    "YTT",
+]
+lint.unfixable = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["lib"]
