@@ -1,3 +1,5 @@
 from setuptools import setup
 
-setup(py_modules=[])
+setup(
+    py_modules=[],
+)

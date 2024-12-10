@@ -1,5 +1,6 @@
 from lib.gameplay.hex import Hex, ResourceType, Edge, Vertex
-from lib.gameplay.pieces import Road
+from lib.gameplay.pieces import Road, PieceType
+from collections import deque
 
 from typing import TYPE_CHECKING, Set, Union
 
@@ -105,8 +106,6 @@ class Board:
         if not self.can_settle(vertexLoc):
             raise ValueError("Invalid settlement location")
         vertex = self.vertices[vertexLoc]
-        if vertex.piece is not None:
-            raise ValueError("Vertex is already occupied")
         settlement = player.get_unplaced_settlement()
         if settlement is None:
             raise ValueError("No unplaced settlements available")
@@ -120,6 +119,8 @@ class Board:
             raise ValueError("No settlement at vertex")
         if vertex.piece.player != player:
             raise ValueError("Settlement belongs to another player")
+        if vertex.piece.type == PieceType.CITY:
+            raise ValueError("City already placed at location")
         city = player.get_unplaced_city()
         if city is None:
             raise ValueError("No unplaced cities available")
@@ -150,7 +151,72 @@ class Board:
         return self.hexes
 
     def shortest_path(self, player: "Player", vertexLoc: int) -> list[Edge]:
-        return []
+        """Find shortest path of unoccupied edges from player's branch vertices to target vertex
+
+        Args:
+            player: Player to find path for
+            vertexLoc: Target vertex location to path to
+
+        Returns:
+            List of unoccupied edges forming shortest path, or empty list if no path exists
+        """
+        target_vertex = self.vertices[vertexLoc]
+        branch_vertices = [
+            self.vertices[v] for v in self.get_possible_branch_vertices(player)
+        ]
+
+        # Track visited vertices and previous edges in path
+        visited = set()
+        prev_edge = {}
+
+        # BFS queue contains (vertex, edge that led to it)
+        queue = deque()
+
+        # Add all starting vertices
+        for vertex in branch_vertices:
+            visited.add(vertex)
+            queue.append((vertex, None))
+
+        # BFS to find shortest path
+        while queue:
+            current_vertex, prev = queue.popleft()
+
+            if current_vertex == target_vertex:
+                # Found target, reconstruct path
+                path = []
+                current = current_vertex
+                while current in prev_edge:
+                    path.append(prev_edge[current])
+                    # Get vertex at other end of edge
+                    current = (
+                        prev_edge[current].north_neighbor()
+                        if prev_edge[current].south_neighbor() == current
+                        else prev_edge[current].south_neighbor()
+                    )
+                return list(reversed(path))
+
+            # Check all unoccupied connected edges
+            for edge in current_vertex.connected_edges():
+                if edge.piece is not None:
+                    continue
+
+                # Get vertex at other end of edge
+                next_vertex = (
+                    edge.north_neighbor()
+                    if edge.south_neighbor() == current_vertex
+                    else edge.south_neighbor()
+                )
+
+                # Skip if vertex has another player's piece
+                if next_vertex.piece is not None and next_vertex.piece.player != player:
+                    continue
+
+                if next_vertex not in visited:
+                    visited.add(next_vertex)
+                    prev_edge[next_vertex] = edge
+                    queue.append((next_vertex, edge))
+
+        return []  # No path found
 
     def longest_road(self, player: "Player") -> int:
         player_roads = [road for road in player.roads if road.position is not None]
@@ -315,6 +381,16 @@ class Board:
             if (v.piece is None or v.piece.player == player)
             and any([v.piece is None for v in v.connected_edges()])
         ]
+
+    def get_possible_road_locations(self, player: "Player") -> list[Edge]:
+        """Return a list of possible road locations for a player"""
+        vertices = [self.vertices[v] for v in self.get_possible_branch_vertices(player)]
+        edges: Set[Edge] = set()
+        for vertex in vertices:
+            for edge in vertex.connected_edges():
+                if edge.piece is None:
+                    edges.add(edge)
+        return list(edges)
 
     def possible_settlement_locations(self, player: "Player") -> list[int]:
         """Return a list of possible settlement locations for a player"""

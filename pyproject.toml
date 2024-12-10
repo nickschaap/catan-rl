@@ -50,6 +50,7 @@ exclude = [
 
 lint.ignore = [
     "D102",
+    "D413",
     "ANN101",
     "ANN401",
     "N801",

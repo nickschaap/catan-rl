@@ -273,3 +273,34 @@ def test_possible_branch_vertices() -> None:
         21,
         52,
     ]
+
+
+@pytest.mark.board
+def test_shortest_path() -> None:
+    def setup_board(*roads: int) -> tuple[Board, Player]:
+        player1 = Player(1, "red")
+        board = Board()
+        for road in roads:
+            board.place_road(player1, road)
+        return board, player1
+
+    board, player1 = setup_board(0, 1, 2, 3, 4, 5, 7)
+
+    shortest_path = board.shortest_path(player1, 8)
+    assert len(shortest_path) == 1
+    assert shortest_path[0].id == 6
+
+    shortest_path = board.shortest_path(player1, 7)
+    assert len(shortest_path) == 2
+    assert shortest_path[0].id == 6
+    assert shortest_path[1].id == 10
+
+    player2 = Player(2, "blue")
+    board.place_settlement(player2, 8)
+    shortest_path = board.shortest_path(player1, 7)
+    assert len(shortest_path) == 5
+
+    # Blocked
+    board.place_settlement(player2, 17)
+    shortest_path = board.shortest_path(player1, 17)
+    assert len(shortest_path) == 0

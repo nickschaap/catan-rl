@@ -6,6 +6,10 @@ from lib.gameplay.hex import ResourceType
 from lib.gameplay.dice import Dice
 from enum import Enum
 from typing import Callable, Union
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 NUM_PLAYERS = 4
 
@@ -46,14 +50,15 @@ class GameEvent(Enum):
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, num_players: int = NUM_PLAYERS, game_delay: int = 0):
         self.current_player: int = 0
         self.winning_player: Union[Player, None] = None
         self.bank = Bank()
         self.board = Board()
         self.dice = Dice()
-        self.players = self.setup_players(NUM_PLAYERS)
+        self.players = self.setup_players(num_players)
         self.listeners = []
+        self.game_delay = game_delay
 
     def listen(self, callback: Callable[[GameEvent], None]) -> None:
         self.listeners.append(callback)
@@ -87,45 +92,71 @@ class Game:
                 return player
         raise ValueError("Player not found")
 
+    def get_player_with_longest_road(self) -> Union[Player, None]:
+        player_with_longest_road = None
+        longest_road = 4
+        for player in self.players:
+            road_length = self.board.longest_road(player)
+            if road_length > longest_road:
+                player_with_longest_road = player
+                longest_road = road_length
+        return player_with_longest_road
+
     def step(self):
         curr_player = self.get_current_player()
 
         for player in self.players:
-            print(f"{player} has {player.points(self.players)} points")
+            logger.info(
+                f"{player} has {player.points(self.players, self.get_player_with_longest_road())} points"
+            )
 
-        print(f"{curr_player}'s turn")
+        logger.info(f"{curr_player}'s turn")
         self.dice.roll()
         self.notify(GameEvent.ROLL_DICE)
-        print(f"Dice roll: {self.dice.total}")
+        logger.info(f"Dice roll: {self.dice.total}")
 
         if self.dice.total == 7:
             for player in self.players:
                 if len(player.resources) > 7:
                     player.split_cards(self.bank)
+            curr_player.rob(self.board, self.bank)
         else:
             for player in self.players:
-                print(f"{player} has {len(player.resources)} resources")
+                logger.info(f"{player} has {len(player.resources)} resources")
                 player.collect_resources(self.bank, self.dice.total)
         curr_player.take_turn(self.board, self.bank, self.players)
 
         self.notify(GameEvent.END_TURN)
 
-        if curr_player.points(self.players) >= 10:
+        if curr_player.points(self.players, self.get_player_with_longest_road()) >= 10:
             self.winning_player = curr_player
 
         self.current_player = (self.current_player + 1) % NUM_PLAYERS
+        if self.game_delay > 0:
+            time.sleep(self.game_delay / 1000)
 
     def play(self):
         self.notify(GameEvent.START_GAME)
         self.current_player = 0
-
-        for player in self.players:
-            for road in player.roads:
-                print(road)
+        round_num = 0
 
         while self.winning_player is None:
             self.step()
             # TODO: Implement end game condition
-            self.winning_player = self.get_current_player()
+            round_num += 1
+            if round_num == 300:
+                self.winning_player = self.get_current_player()
+                logger.warning("Game ended in a draw")
+        logger.info(f"{self.winning_player} wins in {round_num} rounds!")
 
-        print(f"{self.winning_player} wins!")
+        for player in self.players:
+            logger.info(
+                f"{player} has {player.points(self.players, self.get_player_with_longest_road())} points"
+            )
+            longest_road_player = self.get_player_with_longest_road()
+            if longest_road_player is not None:
+                logger.info(f"{longest_road_player} has longest road")
+                logger.info(
+                    f"Longest road length: {self.board.longest_road(longest_road_player)}"
+                )
+            logger.info(f"{player.resource_counts()}")
