@@ -7,3 +7,4 @@ pyright
 ruff
 matplotlib
 argparse
+livereload

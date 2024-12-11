@@ -38,6 +38,9 @@ class HexPiece:
     def __hash__(self):
         return self.id
 
+    def get_hexes(self) -> list["Hex"]:
+        return list(self.hexes.keys())
+
     def attach_hex(self, hex: "Hex", loc: int):
         if hex not in self.hexes:
             self.hexes[hex] = loc
@@ -81,6 +84,20 @@ class Edge(HexPiece):
             return hex.vertices[hexLoc + 1]
         else:
             return hex.vertices[hexLoc - 1]
+
+    def connected_edges(self, player: Player) -> list[Edge]:
+        """Return all edges connected to this edge that are owned by the player or unowned."""
+        edges: Set[Edge] = set()
+        for vertex in self.vertices():
+            if vertex.piece is not None and vertex.piece.player != player:
+                # If the vertex is not owned by the player, skip it
+                continue
+            edges.update(
+                edge
+                for edge in vertex.connected_edges()
+                if (edge.piece is None or edge.piece.player == player) and edge != self
+            )
+        return list(edges)
 
     def vertices(self) -> list[Vertex]:
         return [self.north_neighbor(), self.south_neighbor()]

@@ -160,6 +160,7 @@ class Board:
         Returns:
             List of unoccupied edges forming shortest path, or empty list if no path exists
         """
+        # TODO: There could be mulitple shortest paths, we should return all of them
         target_vertex = self.vertices[vertexLoc]
         branch_vertices = [
             self.vertices[v] for v in self.get_possible_branch_vertices(player)

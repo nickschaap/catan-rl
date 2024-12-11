@@ -112,15 +112,22 @@ class Renderer:
         self.root = self.tree.getroot()
         self.render_hexes()
 
-        # Define the output file path
-        output_dir = "public"
-        output_file = os.path.join(output_dir, "current.svg")
+        # Get the XML tree as a string
+        tree_str = ET.tostring(self.root, encoding="utf-8").decode("utf-8")
 
-        # Ensure the output directory exists
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Write the SVG to the file
-        self.tree.write(output_file, encoding="utf-8", xml_declaration=True)
+        # Write the SVG to the index.html as the first element of the body
+        with open("index.html", "w") as f:
+            f.write(f"""<!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Catan</title>
+                    <link rel="stylesheet" href="index.css" />
+                </head>
+                <body>
+                    {tree_str}
+                </body>
+                </html>
+                """)
 
     def render_hexes(self) -> None:
         hexes = self.game.board.get_hexes()
@@ -134,6 +141,8 @@ class Renderer:
         self.render_robber(self.game.board.robberLoc)
         for edge in self.game.board.edges:
             self.draw_edge(edge)
+        for vertex in self.game.board.vertices:
+            self.draw_vertex(vertex)
 
     def get_hex_coordinates(self, hexId: int) -> list[Coordinate]:
         hex_element = self.root.find(f".//*[@id='Hex{hexId}']")
@@ -153,17 +162,36 @@ class Renderer:
             for points in pair_elements(points.strip().split())
         ]
 
-    def draw_edge(self, edge: "Edge") -> None:
-        if edge.piece is None:
-            return
+    def draw_vertex(self, vertex: "Vertex") -> None:
+        hex, vertexLoc = next(iter(vertex.hexes.items()))
+        coordinateIndex = ((vertexLoc + 4) % 12) // 2
+        vertexCoordinate = self.get_hex_coordinates(hex.id)[coordinateIndex]
 
+        self.draw_text(
+            vertexCoordinate.x,
+            vertexCoordinate.y,
+            str(vertex.id),
+            font_size=12,
+        )
+
+    def draw_edge(self, edge: "Edge") -> None:
         hex, edgeLoc = next(iter(edge.hexes.items()))
         coordinateIndex = ((edgeLoc + 4) % 12) // 2
         hexCoordinates = self.get_hex_coordinates(hex.id)[
             coordinateIndex : coordinateIndex + 2
         ]
 
-        self.draw_line(hexCoordinates[0], hexCoordinates[1], edge.piece.player.color)
+        if edge.piece is not None:
+            self.draw_line(
+                hexCoordinates[0], hexCoordinates[1], edge.piece.player.color
+            )
+
+        self.draw_text(
+            (hexCoordinates[0].x + hexCoordinates[1].x) / 2,
+            (hexCoordinates[0].y + hexCoordinates[1].y) / 2,
+            str(edge.id),
+            font_size=12,
+        )
 
     def draw_line(self, start: Coordinate, end: Coordinate, color: str) -> None:
         # Create a new line element
@@ -193,12 +221,12 @@ class Renderer:
         if hexes_group is not None:
             hexes_group.append(rect)
 
-    def draw_text(self, x: float, y: float, value: str) -> None:
+    def draw_text(self, x: float, y: float, value: str, font_size: int = 24) -> None:
         # Create a new text element
         text = ET.Element("text")
         text.set("x", str(x - 10))
         text.set("y", str(y + 5))
-        text.set("font-size", "24")
+        text.set("font-size", str(font_size))
         text.set("fill", "black")
         text.text = value
 

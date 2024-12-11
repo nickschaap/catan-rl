@@ -52,8 +52,9 @@ class GameEvent(Enum):
 class Game:
     def __init__(self, num_players: int = NUM_PLAYERS, game_delay: int = 0):
         self.current_player: int = 0
+        self.turn_number: int = 0
         self.winning_player: Union[Player, None] = None
-        self.bank = Bank()
+        self.bank = Bank(include_progress_cards=False)
         self.board = Board()
         self.dice = Dice()
         self.players = self.setup_players(num_players)
@@ -73,7 +74,7 @@ class Game:
     def setup_players(self, num_players: int) -> list[Player]:
         players = []
         for i in range(num_players):
-            player = Robot(i, COLORS[i])
+            player = Robot(i, COLORS[i], self)
             players.append(player)
 
             for resource in INITIAL_PLACEMENTS[i]["resources"]:
@@ -133,7 +134,8 @@ class Game:
         self.player_with_largest_army = player_with_largest_army
         return self.player_with_largest_army
 
-    def step(self):
+    def step(self) -> bool:
+        """Returns True if the game is over, False otherwise"""
         curr_player = self.get_current_player()
         playerWithLargestArmy = self.get_player_with_largest_army()
         playerWithLongestRoad = self.get_player_with_longest_road()
@@ -167,18 +169,18 @@ class Game:
         if self.game_delay > 0:
             time.sleep(self.game_delay / 1000)
 
+        return self.winning_player is not None
+
     def play(self):
         self.notify(GameEvent.START_GAME)
-        self.current_player = 0
-        round_num = 0
+        self.turn_number = 0
 
-        while self.winning_player is None:
-            self.step()
-            round_num += 1
-            if round_num == 100 * self.num_players:
+        while not self.step():
+            self.turn_number += 1
+            if self.turn_number == 100 * self.num_players:
                 self.winning_player = self.get_current_player()
                 logger.warning("Game ended in a draw")
-        logger.info(f"{self.winning_player} wins in {round_num} rounds!")
+        logger.info(f"{self.winning_player} wins in {self.turn_number} turns!")
 
         for player in self.players:
             logger.info(

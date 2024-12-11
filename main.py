@@ -2,6 +2,7 @@ import argparse
 import logging
 from lib.gameplay.game import Game
 from lib.visualizer.renderer import Renderer
+from lib.visualizer.action_graph_visualizer import ActionGraphVisualizer
 
 
 def parse_log_level(level_str: str) -> int:
@@ -74,6 +75,21 @@ def main():
         default=4,
         help="Number of players in the game.",
     )
+    setup_parser.add_argument(
+        "--log-level",
+        "-l",
+        type=parse_log_level,
+        default=logging.INFO,  # Default level
+        help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
+
+    setup_parser.add_argument(
+        "--visualize",
+        "-v",
+        type=int,
+        default=0,
+        help="Visualize the action graph for a specific player",
+    )
 
     args = parser.parse_args()
 
@@ -97,9 +113,23 @@ def main():
         Renderer(game)
         game.play()
     if args.command == "setup":
-        game = Game(num_players=args.num_players, game_delay=args.delay)
+        logging.basicConfig(level=logging.INFO)
+        game = Game(num_players=args.num_players, game_delay=0)
         renderer = Renderer(game)
         renderer.render()
+        print(args)
+        if args.visualize >= 0 and args.visualize < len(game.players):
+            logger.info(f"Visualizing action graph for player {args.visualize}")
+            action_graph_visualizer = ActionGraphVisualizer(
+                game.players[args.visualize].action_graph, game
+            )
+            action_graph_visualizer.visualize()
+        print("Starting game...")
+        print("Press enter to step, or q to quit")
+        while True:
+            if input() == "q":
+                break
+            game.step()
 
 
 if __name__ == "__main__":

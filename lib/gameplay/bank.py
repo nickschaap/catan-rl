@@ -9,20 +9,22 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class Bank:
-    def __init__(self):
+    def __init__(self, include_progress_cards: bool = True):
         self.brick_cards = [ResourceCard(ResourceType.BRICK) for _ in range(19)]
         self.wood_cards = [ResourceCard(ResourceType.WOOD) for _ in range(19)]
         self.sheep_cards = [ResourceCard(ResourceType.SHEEP) for _ in range(19)]
         self.wheat_cards = [ResourceCard(ResourceType.WHEAT) for _ in range(19)]
         self.ore_cards = [ResourceCard(ResourceType.ORE) for _ in range(19)]
 
-        self.dev_cards = (
-            [DevelopmentCard(CardType.KNIGHT) for _ in range(14)]
-            + [DevelopmentCard(CardType.ROAD_BUILDING) for _ in range(2)]
-            + [DevelopmentCard(CardType.MONOPOLY) for _ in range(2)]
-            + [DevelopmentCard(CardType.YEAR_OF_PLENTY) for _ in range(2)]
-            + [DevelopmentCard(CardType.VICTORY_POINT) for _ in range(5)]
-        )
+        self.dev_cards = [DevelopmentCard(CardType.KNIGHT) for _ in range(14)] + [
+            DevelopmentCard(CardType.VICTORY_POINT) for _ in range(5)
+        ]
+        if include_progress_cards:
+            self.dev_cards.extend(
+                [DevelopmentCard(CardType.ROAD_BUILDING) for _ in range(2)]
+                + [DevelopmentCard(CardType.MONOPOLY) for _ in range(2)]
+                + [DevelopmentCard(CardType.YEAR_OF_PLENTY) for _ in range(2)]
+            )
         random.shuffle(self.dev_cards)
 
     def get_cards(self, *resourceType: ResourceType) -> list[ResourceCard]:
