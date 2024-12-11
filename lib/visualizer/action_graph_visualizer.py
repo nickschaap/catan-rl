@@ -18,7 +18,10 @@ class ActionGraphVisualizer:
         print("Visualizing action graph")
         with open(self.output_file, "w") as f:
             html = "<html><body>"
-            html += f"<h1>Action Graph for {self.action_graph.player}s</h1>"
+            html += f"<h1>Action Graph for {self.action_graph.player}</h1>"
+            html += "<h2>Stats</h2>"
+            html += f"{self.action_graph.get_state()}"
+            html += "<h2>Actions</h2>"
             html += "<ul>"
             actions = self.action_graph.get_actions()
             for action in actions:

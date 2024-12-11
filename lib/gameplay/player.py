@@ -118,6 +118,9 @@ class Player:
                 return road
         return None
 
+    def get_active_roads(self) -> list[Road]:
+        return [road for road in self.roads if road.position is not None]
+
     def collect_resources(self, bank: Bank, dice_roll: int):
         for city in self.cities:
             if city.vertex is not None:
@@ -164,6 +167,18 @@ class Player:
         counts = {resource: 0 for resource in ResourceType}
         for card in self.resources:
             counts[card.resourceType] += 1
+        return counts
+
+    def resource_abundance(self) -> dict[ResourceType, int]:
+        counts = {resource: 0 for resource in ResourceType}
+        for settlement in self.get_active_settlements():
+            for hex in settlement.vertex.hexes:
+                if hex.resourceType is not None:
+                    counts[hex.resourceType] += 1 * hex.likelihood()
+        for city in self.get_active_cities():
+            for hex in city.vertex.hexes:
+                if hex.resourceType is not None:
+                    counts[hex.resourceType] += 2 * hex.likelihood()
         return counts
 
     def can_build_settlement(self) -> bool:

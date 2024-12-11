@@ -47,6 +47,7 @@ class GameEvent(Enum):
     BUILD_CITY = "BUILD_CITY"
     TRADE = "TRADE"
     END_TURN = "END_TURN"
+    START_TURN = "START_TURN"
 
 
 class Game:
@@ -57,9 +58,10 @@ class Game:
         self.bank = Bank(include_progress_cards=False)
         self.board = Board()
         self.dice = Dice()
+        self.listeners = []
         self.players = self.setup_players(num_players)
         self.num_players = num_players
-        self.listeners = []
+
         self.game_delay = game_delay
         self.player_with_largest_army: Union["Player", None] = None
         self.player_with_longest_road: Union["Player", None] = None
@@ -145,6 +147,7 @@ class Game:
             )
 
         logger.info(f"{curr_player}'s turn")
+        self.notify(GameEvent.START_TURN)
         self.dice.roll()
         self.notify(GameEvent.ROLL_DICE)
         logger.info(f"Dice roll: {self.dice.total}")

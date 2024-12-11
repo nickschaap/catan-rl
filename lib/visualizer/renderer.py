@@ -231,7 +231,7 @@ class Renderer:
         text.text = value
 
         # Find the element with id="Hexes"
-        hexes_group = self.root.find(".//*[@id='Hexes']")
+        hexes_group = self.root.find(".//*[@id='Roads']")
 
         if hexes_group is not None:
             hexes_group.append(text)

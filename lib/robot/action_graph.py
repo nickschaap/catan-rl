@@ -1,135 +1,16 @@
 from typing import TYPE_CHECKING
 
-from enum import Enum
-from lib.gameplay.hex import Vertex, Edge, ResourceType
 
-
-class ActionType(Enum):
-    BUILD_ROAD = 1
-    BUILD_SETTLEMENT = 2
-    BUILD_CITY = 3
-    BUY_DEVELOPMENT_CARD = 4
-
+from lib.robot.build_city import BuildCity
+from lib.robot.buy_development_card import BuyDevelopmentCard
+from lib.robot.build_settlement import BuildSettlement
+from lib.robot.action import Action
+from lib.robot.build_road import BuildRoad
+from lib.robot.player_state import PlayerState
 
 if TYPE_CHECKING:
     from lib.gameplay.player import Player
-    from lib.gameplay.board import Board
-    from lib.gameplay.bank import Bank
-    from lib.gameplay.game import Game
-
-
-class Action:
-    def __init__(self, action_type: ActionType, graph: "ActionGraph"):
-        self.action_type = action_type
-        self.graph = graph
-        self.game = graph.game
-        self.player = graph.player
-        self.board = graph.game.board
-
-    def depends_on(self) -> list["Action"]:
-        # A dynamic list of actions that should be taken which minimize the cost of the action
-        return []
-
-    def cost(self) -> int:
-        """The direct cost of the action"""
-        return 0
-
-    def reward(self) -> int:
-        """The reward of the action"""
-        return 0
-
-    def can_execute(self, board: "Board", bank: "Bank", player: "Player") -> bool:
-        return True
-
-    def execute(
-        self, board: "Board", bank: "Bank", player: "Player", players: list["Player"]
-    ) -> None:
-        pass
-
-    def __str__(self) -> str:
-        return f"{self.action_type}"
-
-
-class BuildRoad(Action):
-    def __init__(self, edge: Edge, graph: "ActionGraph"):
-        super().__init__(ActionType.BUILD_ROAD, graph)
-        self.edge = edge
-
-    def can_execute(self, board: "Board", bank: "Bank", player: "Player") -> bool:
-        return super().can_execute(board, bank, player)
-
-    def __str__(self) -> str:
-        return f"{self.action_type} {self.edge.id}"
-
-
-class BuildSettlement(Action):
-    def __init__(self, vertex: Vertex, graph: "ActionGraph"):
-        super().__init__(ActionType.BUILD_SETTLEMENT, graph)
-        self.vertex = vertex
-
-    def min_distance_to_road(self) -> str:
-        return ", ".join(
-            [
-                str(edge)
-                for edge in self.board.shortest_path(self.player, self.vertex.id)
-            ]
-        )
-
-    def resources_at_hex(self) -> str:
-        return ", ".join(
-            [
-                f"{hex.resourceType} ({hex.value})"
-                for hex in self.vertex.get_hexes()
-                if hex.resourceType is not None
-            ]
-        )
-
-    def __str__(self) -> str:
-        return f"{self.action_type} {self.vertex.id} <ul><li>Min Distance to Road: {self.min_distance_to_road()}</li><li>Resources at Hex: {self.resources_at_hex()}</li></ul>"
-
-
-class BuildCity(Action):
-    def __init__(self, vertex: Vertex, graph: "ActionGraph"):
-        super().__init__(ActionType.BUILD_CITY, graph)
-        self.vertex = vertex
-
-    def resources_at_hex(self) -> str:
-        return ", ".join(
-            [
-                f"{hex.resourceType} ({hex.value})"
-                for hex in self.vertex.get_hexes()
-                if hex.resourceType is not None
-            ]
-        )
-
-    def __str__(self) -> str:
-        return f"{self.action_type} {self.vertex.id}  <ul><li>Resources at Hex: {self.resources_at_hex()}</li></ul>"
-
-
-class ActionGraph:
-    def __init__(self, player: "Player", game: "Game"):
-        self.player = player
-        self.game = game
-
-    def get_actions(self) -> list[Action]:
-        board = self.game.board
-        settlement_actions = [
-            BuildSettlement(vertex, self)
-            for vertex in board.vertices
-            if vertex.piece is None and board.can_settle(vertex.id)
-        ]
-
-        road_actions = [
-            BuildRoad(edge, self) for edge in board.edges if edge.piece is None
-        ]
-
-        city_actions = [
-            BuildCity(settlement.vertex, self)
-            for settlement in self.player.get_active_settlements()
-        ]
-
-        return settlement_actions + road_actions + city_actions
-
+    from lib.gameplay.game import Game, GameEvent
 
 """
 Building an action graph.
@@ -149,3 +30,74 @@ Is the player well positioned to be building roads given their current resources
 Let's say we start with an action 
 
 """
+
+
+class ActionGraph:
+    def __init__(self, player: "Player", game: "Game"):
+        self.player = player
+        self.game = game
+        self.player_state = PlayerState(self.player)
+        self.game.listen(self.on_game_event)
+
+    def on_game_event(self, event: "GameEvent") -> None:
+        if str(event) == "GameEvent.START_TURN":
+            if self.player.id == self.game.current_player:
+                self.player_state.refresh_state()
+
+    def execute_actions(self) -> None:
+        actions = self.get_actions()
+        for action in actions:
+            if action.can_execute(self.game.board, self.game.bank, self.player):
+                action.execute(
+                    self.game.board, self.game.bank, self.player, self.game.players
+                )
+
+    def get_state(self) -> str:
+        info = {
+            "Resources": [
+                str(k) + ": " + str(v)
+                for k, v in self.player_state.resource_counts.items()
+            ],
+            "Settlements": [str(s.position) for s in self.player_state.settlements],
+            "Cities": [str(c.position) for c in self.player_state.cities],
+            "Roads": [str(r.position) for r in self.player_state.roads],
+            "Resource Abundance": [
+                str(k) + ": " + str(v)
+                for k, v in self.player_state.resource_abundance.items()
+            ],
+        }
+
+        state = "<ul>"
+        for k, v in info.items():
+            if len(v) > 1:
+                state += (
+                    f"<li>{k}: <ul>{"".join([f"<li>{i}</li>" for i in v])}</ul></li>"
+                )
+            else:
+                state += f"<li>{k}: {v}</li>"
+        state += "</ul>"
+        return state
+
+    def get_actions(self) -> list[Action]:
+        board = self.game.board
+        settlement_actions = [
+            BuildSettlement(vertex, self)
+            for vertex in board.vertices
+            if vertex.piece is None and board.can_settle(vertex.id)
+        ]
+
+        road_actions = [
+            BuildRoad(edge, self) for edge in board.edges if edge.piece is None
+        ]
+
+        city_actions = [
+            BuildCity(settlement.vertex, self)
+            for settlement in self.player.get_active_settlements()
+        ]
+
+        return (
+            settlement_actions
+            + road_actions
+            + city_actions
+            + [BuyDevelopmentCard(self)]
+        )
