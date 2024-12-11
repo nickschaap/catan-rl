@@ -9,6 +9,7 @@ from lib.gameplay.pieces import (
 from lib.gameplay.bank import Bank
 from lib.gameplay.board import Board
 from functools import reduce
+from lib.gameplay.hex import Hex
 from typing import Union
 from lib.gameplay.hex import ResourceType
 import logging
@@ -57,9 +58,10 @@ class Player:
         )
 
     def points(
-        self, players: list["Player"], playerWithLongestRoad: Union["Player", None]
+        self,
+        playerWithLongestRoad: Union["Player", None],
+        playerWithLargestArmy: Union["Player", None],
     ) -> int:
-        # TODO: Add support for largest army and longest road
         return (
             reduce(lambda acc, curr: acc + curr.get_points(), self.cities, 0)
             + reduce(lambda acc, curr: acc + curr.get_points(), self.settlements, 0)
@@ -67,7 +69,11 @@ class Player:
                 lambda acc, curr: acc + curr.get_points(), self.development_cards, 0
             )
             + (2 if playerWithLongestRoad == self else 0)
+            + (2 if playerWithLargestArmy == self else 0)
         )
+
+    def give_development_card(self, card: DevelopmentCard) -> None:
+        self.development_cards.append(card)
 
     def get_active_settlements(self) -> list[Settlement]:
         return [
@@ -75,6 +81,15 @@ class Player:
             for settlement in self.settlements
             if settlement.vertex is not None
         ]
+
+    def num_active_settlements(self) -> int:
+        return len(self.get_active_settlements())
+
+    def get_active_cities(self) -> list[City]:
+        return [city for city in self.cities if city.vertex is not None]
+
+    def num_active_cities(self) -> int:
+        return len(self.get_active_cities())
 
     def get_unplaced_settlement(self) -> Union[Settlement, None]:
         for settlement in self.settlements:
@@ -142,6 +157,9 @@ class Player:
                 raise ValueError("Player does not have required resources")
         return cards
 
+    def give_resource_to_player(self, card: ResourceCard) -> None:
+        self.resources.append(card)
+
     def resource_counts(self) -> dict[ResourceType, int]:
         counts = {resource: 0 for resource in ResourceType}
         for card in self.resources:
@@ -162,13 +180,10 @@ class Player:
         resource_counts = self.resource_counts()
         return (
             self.unplaced_city_count() > 0
-            and len(self.current_settlements()) > 0
+            and len(self.get_active_cities()) > 0
             and resource_counts[ResourceType.WHEAT] >= 2
             and resource_counts[ResourceType.ORE] >= 3
         )
-
-    def current_settlements(self) -> list[Settlement]:
-        return [s for s in self.settlements if s.position is not None]
 
     def can_build_road(self) -> bool:
         resource_counts = self.resource_counts()
@@ -178,11 +193,17 @@ class Player:
             and resource_counts[ResourceType.WOOD] >= 1
         )
 
-    def pop_least_valuable_resource(self) -> ResourceCard:
-        # TODO: Implement better logic for choosing which cards to return for manual mode
+    def pop_least_valuable_resource(self) -> Union[ResourceCard, None]:
         if len(self.resources) == 0:
-            raise ValueError("Player has no resources")
-        return self.resources.pop()
+            return None
+
+        resource_rankings = reversed(self.rank_resource_values())
+        resource_counts = self.resource_counts()
+
+        for resource in resource_rankings:
+            if resource_counts[resource] > 0:
+                [card] = self.take_resources_from_player([resource])
+                return card
 
     def split_cards(self, bank: Bank):
         if len(self.resources) > 7:
@@ -193,16 +214,9 @@ class Player:
     def play_development_card(self, card: DevelopmentCard):
         pass
 
-    def trade(
-        self, other: "Player", offer: list[ResourceCard], request: list[ResourceCard]
-    ):
-        pass
-
-    def trade_bank(self, offer: list[ResourceCard], request: list[ResourceCard]):
-        pass
-
-    def trade_port(self, offer: list[ResourceCard], request: list[ResourceCard]):
-        pass
+    def trade_bank(self, offer: list[ResourceType], request: ResourceType, bank: Bank):
+        bank.return_cards(self.take_resources_from_player(offer))
+        self.resources.append(bank.get_card(request))
 
     def build_settlement(self, board: Board, vertexLoc: int, bank: Bank):
         bank.purchase_settlement(self)
@@ -219,10 +233,35 @@ class Player:
     def buy_development_card(self, bank: Bank):
         bank.purchase_dev_card(self)
 
-    def rob(self, board: Board, bank: Bank):
-        random_hex = random.choice(board.get_hexes())
-        board.move_robber(random_hex.id)
-        # TODO: Implement logic for what happens when robber moves to a hex with a player's settlement
+    def get_hex_to_rob(self, board: Board, bank: Bank) -> Hex:
+        return random.choice(board.get_hexes())
+
+    def choose_player_to_rob(
+        self, players: list["Player"], board: Board, bank: Bank
+    ) -> Union["Player", None]:
+        return None if len(players) == 0 else players[0]
+
+    def rank_resource_values(self) -> list[ResourceType]:
+        """Returns resources valuable to the player from most valuable to least valuable"""
+        return [
+            ResourceType.ORE,
+            ResourceType.BRICK,
+            ResourceType.SHEEP,
+            ResourceType.WHEAT,
+            ResourceType.WOOD,
+        ]
+
+    def rob(self) -> Union[ResourceCard, None]:
+        return self.pop_least_valuable_resource()
+
+    def move_robber(self, board: Board, bank: Bank) -> None:
+        hex = self.get_hex_to_rob(board, bank)
+        board.move_robber(hex.id)
+
+        settled_players = hex.get_settled_players()
+        player_to_rob = self.choose_player_to_rob(settled_players, board, bank)
+        if player_to_rob is not None:
+            player_to_rob.rob()
 
     def take_turn(self, board: Board, bank: Bank, players: list["Player"]):
         pass

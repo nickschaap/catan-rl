@@ -57,8 +57,11 @@ class Game:
         self.board = Board()
         self.dice = Dice()
         self.players = self.setup_players(num_players)
+        self.num_players = num_players
         self.listeners = []
         self.game_delay = game_delay
+        self.player_with_largest_army: Union["Player", None] = None
+        self.player_with_longest_road: Union["Player", None] = None
 
     def listen(self, callback: Callable[[GameEvent], None]) -> None:
         self.listeners.append(callback)
@@ -93,21 +96,50 @@ class Game:
         raise ValueError("Player not found")
 
     def get_player_with_longest_road(self) -> Union[Player, None]:
-        player_with_longest_road = None
-        longest_road = 4
+        player_with_longest_road = self.player_with_longest_road
+
+        # Minimum length for longest road is greater than 4
+        longest_road = (
+            4
+            if player_with_longest_road is None
+            else self.board.longest_road(player_with_longest_road)
+        )
         for player in self.players:
+            if player == player_with_longest_road:
+                continue
             road_length = self.board.longest_road(player)
+            # Must be explicitly larger than the longest so far
             if road_length > longest_road:
                 player_with_longest_road = player
                 longest_road = road_length
-        return player_with_longest_road
+        self.player_with_longest_road = player_with_longest_road
+        return self.player_with_longest_road
+
+    def get_player_with_largest_army(self) -> Union[Player, None]:
+        player_with_largest_army = self.player_with_largest_army
+        # Minimum length for largest army is greater than 3
+        largest_army = (
+            2
+            if self.player_with_largest_army is None
+            else self.player_with_largest_army.largest_army_size()
+        )
+        for player in self.players:
+            if player == player_with_largest_army:
+                continue
+            army_size = player.largest_army_size()
+            if army_size > largest_army:
+                player_with_largest_army = player
+                largest_army = army_size
+        self.player_with_largest_army = player_with_largest_army
+        return self.player_with_largest_army
 
     def step(self):
         curr_player = self.get_current_player()
-
+        playerWithLargestArmy = self.get_player_with_largest_army()
+        playerWithLongestRoad = self.get_player_with_longest_road()
         for player in self.players:
             logger.info(
-                f"{player} has {player.points(self.players, self.get_player_with_longest_road())} points"
+                f"{player} has {player.points(playerWithLongestRoad, playerWithLargestArmy)} points"
             )
 
         logger.info(f"{curr_player}'s turn")
@@ -119,7 +151,7 @@ class Game:
             for player in self.players:
                 if len(player.resources) > 7:
                     player.split_cards(self.bank)
-            curr_player.rob(self.board, self.bank)
+            curr_player.move_robber(self.board, self.bank)
         else:
             for player in self.players:
                 logger.info(f"{player} has {len(player.resources)} resources")
@@ -131,7 +163,7 @@ class Game:
         if curr_player.points(self.players, self.get_player_with_longest_road()) >= 10:
             self.winning_player = curr_player
 
-        self.current_player = (self.current_player + 1) % NUM_PLAYERS
+        self.current_player = (self.current_player + 1) % self.num_players
         if self.game_delay > 0:
             time.sleep(self.game_delay / 1000)
 
@@ -142,9 +174,8 @@ class Game:
 
         while self.winning_player is None:
             self.step()
-            # TODO: Implement end game condition
             round_num += 1
-            if round_num == 300:
+            if round_num == 100 * self.num_players:
                 self.winning_player = self.get_current_player()
                 logger.warning("Game ended in a draw")
         logger.info(f"{self.winning_player} wins in {round_num} rounds!")

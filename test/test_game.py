@@ -5,6 +5,7 @@ from lib.gameplay.board import Board
 from lib.gameplay.dice import Dice
 from lib.gameplay.player import Player
 from lib.gameplay.hex import ResourceType
+from lib.gameplay.pieces import CardType
 import copy
 
 
@@ -136,3 +137,79 @@ def test_game() -> None:
             ResourceType.BRICK,
         ],
     )
+
+
+def test_longest_road() -> None:
+    game = Game()
+
+    assert game.get_player_with_largest_army() is None
+    assert game.get_player_with_longest_road() is None
+
+    board = game.board
+    player1 = game.players[0]
+    for edge in [0, 1, 2, 3, 4]:
+        board.place_road(player1, edge)
+        if edge <= 3:
+            assert game.get_player_with_longest_road() is None
+        else:
+            assert game.get_player_with_longest_road() == player1
+
+    player2 = game.players[1]
+    board.place_road(player2, 5)
+    assert game.get_player_with_longest_road() == player1
+
+    for edge in [9, 17, 22, 32, 38]:
+        board.place_road(player2, edge)
+        if edge != 38:
+            assert game.get_player_with_longest_road() == player1
+        else:
+            assert game.get_player_with_longest_road() == player2
+
+
+def test_largest_army() -> None:
+    game = Game()
+    bank = game.bank
+
+    assert game.get_player_with_largest_army() is None
+    player1 = game.players[0]
+    for i in range(3):
+        player1.give_development_card(bank.get_dev_card(type=CardType.KNIGHT))
+        if i < 2:
+            assert game.get_player_with_largest_army() is None
+    assert game.get_player_with_largest_army() == player1
+
+    player2 = game.players[1]
+    for i in range(4):
+        player2.give_development_card(bank.get_dev_card(type=CardType.KNIGHT))
+        if i < 3:
+            assert game.get_player_with_largest_army() == player1
+    assert game.get_player_with_largest_army() == player2
+
+
+def test_rob() -> None:
+    game = Game()
+
+    player1 = game.players[0]
+
+    resource_counts = player1.resource_counts()
+    assert resource_counts[ResourceType.WOOD] == 2
+    assert resource_counts[ResourceType.WHEAT] == 1
+
+    card = player1.rob()
+    assert card is not None
+    assert card.get_type() == ResourceType.WOOD
+
+    card = player1.rob()
+    assert card is not None
+    assert card.get_type() == ResourceType.WOOD
+
+    card = player1.rob()
+    assert card is not None
+    assert card.get_type() == ResourceType.WHEAT
+
+    resource_counts = player1.resource_counts()
+    assert resource_counts[ResourceType.WOOD] == 0
+    assert resource_counts[ResourceType.WHEAT] == 0
+
+    card = player1.rob()
+    assert card is None

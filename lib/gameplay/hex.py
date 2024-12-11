@@ -118,6 +118,23 @@ class Hex:
             raise ValueError("Invalid value")
         self.value = value
 
+    def likelihood(self) -> float:
+        if self.value is None:
+            return 0
+        if self.value in [2, 12]:
+            return 0.03
+        if self.value in [3, 11]:
+            return 0.06
+        if self.value in [4, 10]:
+            return 0.08
+        if self.value in [5, 9]:
+            return 0.11
+        if self.value in [6, 8]:
+            return 0.14
+        if self.value == 7:
+            return 0.17
+        raise ValueError("Invalid value")
+
     def attach_edges(self, edges: list[Edge]):
         if len(edges) != 6:
             raise ValueError("Must have 6 edges")

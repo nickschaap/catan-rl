@@ -1,6 +1,6 @@
 from lib.gameplay.pieces import ResourceCard, DevelopmentCard, CardType
 from lib.gameplay.hex import ResourceType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 import numpy as np
 import random
 
@@ -29,18 +29,31 @@ class Bank:
         return [self.get_card(resource) for resource in resourceType]
 
     def get_card(self, resourceType: ResourceType) -> ResourceCard:
-        if resourceType == ResourceType.BRICK:
-            return self.brick_cards.pop()
-        if resourceType == ResourceType.WOOD:
-            return self.wood_cards.pop()
-        if resourceType == ResourceType.SHEEP:
-            return self.sheep_cards.pop()
-        if resourceType == ResourceType.WHEAT:
-            return self.wheat_cards.pop()
-        if resourceType == ResourceType.ORE:
-            return self.ore_cards.pop()
+        try:
+            if resourceType == ResourceType.BRICK:
+                return self.brick_cards.pop()
+            if resourceType == ResourceType.WOOD:
+                return self.wood_cards.pop()
+            if resourceType == ResourceType.SHEEP:
+                return self.sheep_cards.pop()
+            if resourceType == ResourceType.WHEAT:
+                return self.wheat_cards.pop()
+            if resourceType == ResourceType.ORE:
+                return self.ore_cards.pop()
+        except IndexError:
+            raise ValueError(f"Bank ran out of {resourceType}")
 
-    def get_dev_card(self) -> DevelopmentCard:
+    def get_dev_card(self, type: Union[CardType, None] = None) -> DevelopmentCard:
+        if type is not None:
+            # Find the next card of the passed in type
+            def is_type(card: DevelopmentCard) -> bool:
+                return card.get_type() == type
+
+            index = next((i for i, v in enumerate(self.dev_cards) if is_type(v)), None)
+            if index is None:
+                raise ValueError(f"No {type} cards in the bank")
+            return self.dev_cards.pop(index)
+        # Default to a random card
         index = np.random.randint(0, len(self.dev_cards))
         return self.dev_cards.pop(index)
 
@@ -58,6 +71,10 @@ class Bank:
             self.wheat_cards.append(card)
         if card.resourceType == ResourceType.ORE:
             self.ore_cards.append(card)
+
+    def return_cards(self, cards: list[ResourceCard]) -> None:
+        for card in cards:
+            self.return_card(card)
 
     def purchase_road(self, player: "Player"):
         cards = player.take_resources_from_player(

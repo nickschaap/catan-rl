@@ -11,7 +11,7 @@ matplotlib.rcParams["font.family"] = "serif"  # Use a serif font like in LaTeX
 logger = logging.getLogger(__name__)
 
 
-def win_stats(num_games: int):
+def win_stats(num_games: int) -> None:
     results: list[str] = []
     for i in range(1, num_games + 1):
         game = Game()

@@ -17,5 +17,5 @@ def test_player() -> None:
     assert len(player.roads) == 15
 
     assert player.largest_army_size() == 0
-    assert player.points([], None) == 0
+    assert player.points(None, None) == 0
     assert player.get_active_settlements() == []
