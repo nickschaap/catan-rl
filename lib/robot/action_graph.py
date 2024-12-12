@@ -41,8 +41,7 @@ class ActionGraph:
 
     def on_game_event(self, event: "GameEvent") -> None:
         if str(event) == "GameEvent.START_TURN":
-            if self.player.id == self.game.current_player:
-                self.player_state.refresh_state()
+            self.player_state.refresh_state()
 
     def execute_actions(self) -> None:
         actions = self.get_actions()
@@ -53,30 +52,7 @@ class ActionGraph:
                 )
 
     def get_state(self) -> str:
-        info = {
-            "Resources": [
-                str(k) + ": " + str(v)
-                for k, v in self.player_state.resource_counts.items()
-            ],
-            "Settlements": [str(s.position) for s in self.player_state.settlements],
-            "Cities": [str(c.position) for c in self.player_state.cities],
-            "Roads": [str(r.position) for r in self.player_state.roads],
-            "Resource Abundance": [
-                str(k) + ": " + str(v)
-                for k, v in self.player_state.resource_abundance.items()
-            ],
-        }
-
-        state = "<ul>"
-        for k, v in info.items():
-            if len(v) > 1:
-                state += (
-                    f"<li>{k}: <ul>{"".join([f"<li>{i}</li>" for i in v])}</ul></li>"
-                )
-            else:
-                state += f"<li>{k}: {v}</li>"
-        state += "</ul>"
-        return state
+        return str(self.player_state)
 
     def get_actions(self) -> list[Action]:
         board = self.game.board

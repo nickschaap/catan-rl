@@ -12,6 +12,15 @@ class BuildSettlement(Action):
         super().__init__(ActionType.BUILD_SETTLEMENT, graph)
         self.vertex = vertex
 
+    def cost(self) -> int:
+        """The direct cost of the action
+        Things that should be considered:
+        - The minimum distance to a road owned by the player (dynamic)
+        - The resources required to build the settlement (constant)
+
+        """
+        return 0
+
     def min_distance_to_road(self) -> str:
         return ", ".join(
             [
@@ -23,7 +32,7 @@ class BuildSettlement(Action):
     def resources_at_hex(self) -> str:
         return ", ".join(
             [
-                f"{hex.resourceType} ({hex.value})"
+                f"{hex.resourceType} ({hex.likelihood()})"
                 for hex in self.vertex.get_hexes()
                 if hex.resourceType is not None
             ]

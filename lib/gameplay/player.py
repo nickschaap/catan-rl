@@ -10,7 +10,8 @@ from lib.gameplay.bank import Bank
 from lib.gameplay.board import Board
 from functools import reduce
 from lib.gameplay.hex import Hex
-from typing import Union
+from lib.gameplay.pieces import PieceType
+from typing import Union, Literal
 from lib.gameplay.hex import ResourceType
 import logging
 import random
@@ -181,6 +182,33 @@ class Player:
                     counts[hex.resourceType] += 2 * hex.likelihood()
         return counts
 
+    def purchase_power(
+        self,
+    ) -> dict[Union[PieceType, Literal["Development Card"]], int]:
+        purchase_power = {}
+        resource_abundance = self.resource_abundance()
+
+        purchase_power[PieceType.SETTLEMENT] = (
+            resource_abundance[ResourceType.BRICK]
+            + resource_abundance[ResourceType.WOOD]
+            + resource_abundance[ResourceType.WHEAT]
+            + resource_abundance[ResourceType.SHEEP]
+        ) / 4
+        purchase_power[PieceType.CITY] = (
+            resource_abundance[ResourceType.ORE] / 3
+            + resource_abundance[ResourceType.WHEAT] / 2
+        ) / 2
+        purchase_power[PieceType.ROAD] = (
+            resource_abundance[ResourceType.WOOD]
+            + resource_abundance[ResourceType.BRICK]
+        ) / 2
+        purchase_power["Development Card"] = (
+            resource_abundance[ResourceType.WHEAT]
+            + resource_abundance[ResourceType.SHEEP]
+            + resource_abundance[ResourceType.ORE]
+        ) / 3
+        return purchase_power
+
     def can_build_settlement(self) -> bool:
         resource_counts = self.resource_counts()
         return (
@@ -223,6 +251,7 @@ class Player:
     def split_cards(self, bank: Bank):
         if len(self.resources) > 7:
             num_cards = len(self.resources) // 2
+            logger.info(f"Splitting cards for {self}, discarding {num_cards} cards")
             for _ in range(num_cards):
                 bank.return_card(self.pop_least_valuable_resource())
 

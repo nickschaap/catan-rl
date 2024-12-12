@@ -115,6 +115,14 @@ class Renderer:
         # Get the XML tree as a string
         tree_str = ET.tostring(self.root, encoding="utf-8").decode("utf-8")
 
+        links = "<div style='display: flex; justify-content: space-between;'>"
+        links += "<a href='/'>Back</a>"
+        links += "<a href='/red'>Red</a>"
+        links += "<a href='/blue'>Blue</a>"
+        links += "<a href='/orange'>Orange</a>"
+        links += "<a href='/white'>White</a>"
+        links += "</div>"
+
         # Write the SVG to the index.html as the first element of the body
         with open("index.html", "w") as f:
             f.write(f"""<!DOCTYPE html>
@@ -124,6 +132,7 @@ class Renderer:
                     <link rel="stylesheet" href="index.css" />
                 </head>
                 <body>
+                    {links}
                     {tree_str}
                 </body>
                 </html>

@@ -15,13 +15,18 @@ class Action:
         self.game = graph.game
         self.player = graph.player
         self.board = graph.game.board
+        self.player_state = graph.player_state
 
     def depends_on(self) -> list["Action"]:
         # A dynamic list of actions that should be taken which minimize the cost of the action
         return []
 
     def cost(self) -> int:
-        """The direct cost of the action"""
+        """The direct cost of the action
+        Things that should be considered:
+        - The cost of the action
+        - The cost of the actions that should be taken before this action
+        """
         return 0
 
     def reward(self) -> int:

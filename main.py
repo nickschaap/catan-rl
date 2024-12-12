@@ -83,12 +83,11 @@ def main():
         help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
 
+    # add the visualize boolean flag
     setup_parser.add_argument(
         "--visualize",
         "-v",
-        type=int,
-        default=0,
-        help="Visualize the action graph for a specific player",
+        help="Visualize the action graphs",
     )
 
     args = parser.parse_args()
@@ -117,13 +116,15 @@ def main():
         game = Game(num_players=args.num_players, game_delay=0)
         renderer = Renderer(game)
         renderer.render()
-        print(args)
-        if args.visualize >= 0 and args.visualize < len(game.players):
-            logger.info(f"Visualizing action graph for player {args.visualize}")
-            action_graph_visualizer = ActionGraphVisualizer(
-                game.players[args.visualize].action_graph, game
-            )
-            action_graph_visualizer.visualize()
+        if args.visualize:
+            for player in game.players:
+                logger.info(f"Visualizing action graph for {player}")
+                action_graph_visualizer = ActionGraphVisualizer(
+                    player.action_graph,
+                    game,
+                    f"action_graph_{player.color}.html",
+                )
+                action_graph_visualizer.visualize()
         print("Starting game...")
         print("Press enter to step, or q to quit")
         while True:

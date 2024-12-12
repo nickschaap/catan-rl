@@ -8,3 +8,4 @@ htmlcov/
 current.svg
 output/
 .ruff_cache
+action_graph*.html

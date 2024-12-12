@@ -52,6 +52,10 @@ class Settlement(Piece):
             self.position = None
         self.vertex = vertex
 
+    def get_resources(self) -> list[ResourceType]:
+        hexes = self.vertex.hexes
+        return [hex.resourceType for hex in hexes if hex.resourceType is not None]
+
     def get_points(self) -> int:
         if self.position is None:
             return 0
