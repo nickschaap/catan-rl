@@ -16,12 +16,19 @@ class Action:
         self.player = graph.player
         self.board = graph.game.board
         self.player_state = graph.player_state
+        self.parameters = graph.game.parameters
 
-    def depends_on(self) -> list["Action"]:
+    def initialize_calculations(self) -> None:
+        self.cost = self.calculate_cost()
+        self.reward = self.calculate_reward()
+        self.priority = self.calculate_priority()
+        self.dependencies = self.calculate_dependencies()
+
+    def calculate_dependencies(self) -> list["Action"]:
         # A dynamic list of actions that should be taken which minimize the cost of the action
         return []
 
-    def cost(self) -> int:
+    def calculate_cost(self) -> float:
         """The direct cost of the action
         Things that should be considered:
         - The cost of the action
@@ -29,13 +36,13 @@ class Action:
         """
         return 0
 
-    def reward(self) -> int:
+    def calculate_reward(self) -> float:
         """The reward of the action"""
         return 0
 
-    def priority(self) -> int:
+    def calculate_priority(self) -> float:
         """The priority of the action"""
-        return self.reward() - self.cost()
+        return self.calculate_reward() - self.calculate_cost()
 
     def can_execute(self, board: "Board", bank: "Bank", player: "Player") -> bool:
         return True
@@ -46,4 +53,9 @@ class Action:
         pass
 
     def __str__(self) -> str:
-        return f"{self.action_type}"
+        info = {
+            "Priority": self.priority,
+            "Cost": self.cost,
+            "Reward": self.reward,
+        }
+        return f"{self.action_type} <ul>{''.join([f'<li>{k}: {v}</li>' for k, v in info.items()])}</ul>"

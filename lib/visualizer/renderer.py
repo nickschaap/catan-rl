@@ -311,13 +311,14 @@ class Renderer:
 
         for path in paths:
             current_d = path.get("d")
-            # The current d starts with an M command, so we need to remove it
-            current_d = re.sub(
-                r"M[\d\.]+,[\d\.]+",
-                f"M{round(center.x + 20,2)},{round(center.y + 20,2)}",
-                current_d,
-            )
-            path.set("d", current_d)
+            if current_d is not None:
+                # The current d starts with an M command, so we need to remove it
+                current_d = re.sub(
+                    r"M[\d\.]+,[\d\.]+",
+                    f"M{round(center.x + 20,2)},{round(center.y + 20,2)}",
+                    current_d,
+                )
+                path.set("d", current_d)
             path.set("stroke", "black")
             path.set("stroke-width", "1")
             path.set("fill", "beige")

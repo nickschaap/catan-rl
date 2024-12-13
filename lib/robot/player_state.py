@@ -17,6 +17,7 @@ class PlayerState:
         self.resource_counts = self.player.resource_counts()
         self.resource_abundance = self.player.resource_abundance()
         self.purchase_power = self.player.purchase_power()
+        self.resource_importance = self.player.resource_importance()
         self.settlements = self.player.get_active_settlements()
         self.cities = self.player.get_active_cities()
         self.roads = self.player.get_active_roads()
@@ -38,6 +39,11 @@ class PlayerState:
             "Purchase Power": [
                 str(k) + ": " + str(v) for k, v in self.purchase_power.items()
             ],
+            "Resource Importance": [
+                str(k) + ": " + str(v) for k, v in self.resource_importance.items()
+            ],
+            "Points": [self.player.points()],
+            "Development Cards": [str(card) for card in self.player.development_cards],
         }
 
         state = "<ul>"

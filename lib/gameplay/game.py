@@ -1,13 +1,16 @@
 from lib.gameplay.player import Player
+from lib.logging.database import MongoLogger
 from lib.robot.robot import Robot
 from lib.gameplay.bank import Bank
 from lib.gameplay.board import Board
 from lib.gameplay.hex import ResourceType
 from lib.gameplay.dice import Dice
+from lib.gameplay.params import DEFAULT_PARAMETERS, GameParameters
 from enum import Enum
 from typing import Callable, Union
 import logging
 import time
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +54,15 @@ class GameEvent(Enum):
 
 
 class Game:
-    def __init__(self, num_players: int = NUM_PLAYERS, game_delay: int = 0):
+    def __init__(
+        self,
+        num_players: int = NUM_PLAYERS,
+        game_delay: int = 0,
+        parameters: GameParameters = DEFAULT_PARAMETERS,
+        experiment_id: Union[str, None] = None,
+    ):
+        self.game_id = str(uuid.uuid4())
+        self.experiment_id = experiment_id
         self.current_player: int = 0
         self.turn_number: int = 0
         self.winning_player: Union[Player, None] = None
@@ -65,6 +76,7 @@ class Game:
         self.game_delay = game_delay
         self.player_with_largest_army: Union["Player", None] = None
         self.player_with_longest_road: Union["Player", None] = None
+        self.parameters = parameters
 
     def listen(self, callback: Callable[[GameEvent], None]) -> None:
         self.listeners.append(callback)
@@ -139,15 +151,12 @@ class Game:
     def step(self) -> bool:
         """Returns True if the game is over, False otherwise"""
         curr_player = self.get_current_player()
-        playerWithLargestArmy = self.get_player_with_largest_army()
-        playerWithLongestRoad = self.get_player_with_longest_road()
         for player in self.players:
-            logger.info(
-                f"{player} has {player.points(playerWithLongestRoad, playerWithLargestArmy)} points"
-            )
+            logger.info(f"{player} has {player.points()} points")
 
         logger.info(f"{curr_player}'s turn")
         self.notify(GameEvent.START_TURN)
+        curr_player.pre_roll(self.board, self.bank, self.players)
         self.dice.roll()
         self.notify(GameEvent.ROLL_DICE)
         logger.info(f"Dice roll: {self.dice.total}")
@@ -165,7 +174,16 @@ class Game:
 
         self.notify(GameEvent.END_TURN)
 
-        if curr_player.points(self.players, self.get_player_with_longest_road()) >= 10:
+        if logger.isEnabledFor(logging.INFO):
+            for resource in ResourceType:
+                logger.info(
+                    f"{resource}: {sum(player.resource_counts()[resource] for player in self.players) + self.bank.resource_counts()[resource]}"
+                )
+            logger.info(
+                f"Development cards: {len(self.bank.dev_cards) + sum(len(player.development_cards) for player in self.players)}"
+            )
+
+        if curr_player.points() >= 10:
             self.winning_player = curr_player
 
         self.current_player = (self.current_player + 1) % self.num_players
@@ -185,10 +203,23 @@ class Game:
                 logger.warning("Game ended in a draw")
         logger.info(f"{self.winning_player} wins in {self.turn_number} turns!")
 
+        MongoLogger.log(
+            "game_logs",
+            {
+                "game_id": self.game_id,
+                "experiment_id": self.experiment_id
+                if self.experiment_id is not None
+                else "none",
+                "turn_number": self.turn_number,
+                "winning_player": self.winning_player.id
+                if self.winning_player is not None
+                else "none",
+                **self.parameters,
+            },
+        )
+
         for player in self.players:
-            logger.info(
-                f"{player} has {player.points(self.players, self.get_player_with_longest_road())} points"
-            )
+            logger.info(f"{player} has {player.points()} points")
             longest_road_player = self.get_player_with_longest_road()
             if longest_road_player is not None:
                 logger.info(f"{longest_road_player} has longest road")

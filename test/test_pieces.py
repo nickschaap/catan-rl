@@ -12,11 +12,13 @@ from lib.gameplay.pieces import (
 from lib.gameplay.hex import ResourceType
 from lib.gameplay.player import Player
 from lib.gameplay.board import Vertex, Board
+from lib.gameplay.game import Game
 
 
 @pytest.mark.pieces
 def test_settlement() -> None:
-    settlement = Settlement(Player(0, "red"))
+    game = Game()
+    settlement = Settlement(Player(0, "red", game))
     assert settlement.player.id == 0
     assert settlement.position is None
 
@@ -34,7 +36,8 @@ def test_settlement() -> None:
 
 @pytest.mark.pieces
 def test_city() -> None:
-    city = City(Player(0, "red"))
+    game = Game()
+    city = City(Player(0, "red", game))
     assert city.player.id == 0
     assert city.position is None
 
@@ -52,7 +55,8 @@ def test_city() -> None:
 
 @pytest.mark.pieces
 def test_road() -> None:
-    road = Road(Player(0, "red"))
+    game = Game()
+    road = Road(Player(0, "red", game))
     assert road.player.id == 0
     assert road.position is None
 
@@ -64,8 +68,9 @@ def test_road() -> None:
 
 @pytest.mark.pieces
 def test_connecting_road() -> None:
+    game = Game()
     board = Board()
-    player = Player(0, "red")
+    player = Player(0, "red", game)
     for loc in [1, 2, 7, 12, 13]:
         board.place_road(player, loc)
 

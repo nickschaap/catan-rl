@@ -1,3 +1,7 @@
+from lib.gameplay.bank import Bank
+from lib.gameplay.board import Board
+from lib.gameplay.pieces import PieceType
+from lib.gameplay.player import Player
 from lib.robot.action import Action
 from lib.robot.action_type import ActionType
 from typing import TYPE_CHECKING
@@ -14,9 +18,81 @@ class BuildRoad(Action):
     def __init__(self, edge: "Edge", graph: "ActionGraph"):
         super().__init__(ActionType.BUILD_ROAD, graph)
         self.edge = edge
+        self.distance_to_road = self.calculate_distance_to_road()
+        self.settlement_unlocks = []
+        self.initialize_calculations()
+
+    def calculate_distance_to_road(self) -> int:
+        north_path = self.board.shortest_path(
+            self.player, self.edge.north_neighbor().id
+        )
+        south_path = self.board.shortest_path(
+            self.player, self.edge.south_neighbor().id
+        )
+        self.shortest_path = None
+        if north_path is None and south_path is None:
+            return 1000
+        if north_path is not None and south_path is not None:
+            self.shortest_path = (
+                north_path
+                if len(north_path or []) < len(south_path or [])
+                else south_path
+            )
+        elif north_path is not None:
+            self.shortest_path = north_path
+        elif south_path is not None:
+            self.shortest_path = south_path
+        else:
+            self.shortest_path = None
+        return len(self.shortest_path or [])
+
+    def calculate_cost(self) -> float:
+        purchase_power = 1 / (1 + self.player_state.purchase_power[PieceType.ROAD])
+        cost = 2.0 * purchase_power
+        if self.distance_to_road > 0:
+            # Each road we need to build adds to the cost
+            # Cost is exponential to prefer closer settlements
+            cost += 2.0 * (2**self.distance_to_road)
+        return cost * self.parameters["road_building_cost"]
+
+    def calculate_reward(self) -> float:
+        """Road building rewards access to new building locations
+        - Longest road
+        - Access to new vertices
+        - If you're neck and neck with another player for longest road, building a road will give you the edge
+        - Cutting off an opponent's road will give you the edge
+        """
+        # Check to see if this road unlocks important vertices
+        reward = 0.0
+        settlement_actions = [
+            settlement_action.priority
+            for settlement_action in self.graph.settlement_actions
+            if settlement_action.road_path is not None
+            and self.edge in settlement_action.road_path
+        ]
+        if len(settlement_actions) > 0:
+            max_settlement_priority = max(settlement_actions)
+            reward += max_settlement_priority
+
+        if len(self.player.resources) > 7:
+            reward += 3.0
+
+        return reward * self.parameters["road_building_reward"]
 
     def can_execute(self, board: "Board", bank: "Bank", player: "Player") -> bool:
-        return super().can_execute(board, bank, player)
+        return player.can_build_road_at_edge(self.edge.id, board)
+
+    def execute(
+        self, board: Board, bank: Bank, player: Player, players: list[Player]
+    ) -> None:
+        player.build_road(board, self.edge.id, bank)
 
     def __str__(self) -> str:
-        return f"{self.action_type} {self.edge.id} <ul><li>Priority: {self.priority()}</li></ul>"
+        info = {
+            "Priority": self.priority,
+            "Cost": self.cost,
+            "Reward": self.reward,
+            "Distance to Road": self.distance_to_road,
+            "Shortest Path": self.shortest_path,
+        }
+        return f"{self.action_type} {self.edge.id} <ul>{''.join([f'<li>{k}: {v}</li>' for k, v in info.items()])}</ul>"

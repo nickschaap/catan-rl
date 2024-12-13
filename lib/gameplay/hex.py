@@ -66,6 +66,12 @@ class Vertex(HexPiece):
                 break
         return list(edges)
 
+    def player_is_connected(self, player: Player) -> bool:
+        return any(
+            edge.piece is not None and edge.piece.player == player
+            for edge in self.connected_edges()
+        )
+
 
 class Edge(HexPiece):
     def __init__(self, id: int):
@@ -98,6 +104,22 @@ class Edge(HexPiece):
                 if (edge.piece is None or edge.piece.player == player) and edge != self
             )
         return list(edges)
+
+    def player_is_connected(self, player: Player) -> bool:
+        """Return all edges connected to this edge that are owned by the player"""
+        for vertex in self.vertices():
+            if vertex.piece is not None and vertex.piece.player != player:
+                # If the vertex is not owned by the player, skip it
+                continue
+
+            found = any(
+                edge.piece is not None and edge.piece.player == player
+                for edge in vertex.connected_edges()
+                if edge != self
+            )
+            if found:
+                return True
+        return False
 
     def vertices(self) -> list[Vertex]:
         return [self.north_neighbor(), self.south_neighbor()]

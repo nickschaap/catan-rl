@@ -21,3 +21,9 @@ In another terminal:
 ```bash
 python main.py setup -v 0
 ```
+
+# Win Stats Experiment
+
+```bash
+python main.py -e win_stats
+```

@@ -37,7 +37,7 @@ class ActionGraphVisualizer:
             html += f"{self.action_graph.get_state()}"
             html += "<h2>Actions</h2>"
             html += "<ul>"
-            actions = self.action_graph.get_actions()
+            actions = self.action_graph.get_post_roll_actions()
             for action in actions:
                 html += f"<li>{action}</li>"
             html += "</ul></body></html>"

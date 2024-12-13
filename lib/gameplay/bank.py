@@ -1,3 +1,4 @@
+from lib.gameplay.params import DEFAULT_PARAMETERS, GameParameters
 from lib.gameplay.pieces import ResourceCard, DevelopmentCard, CardType
 from lib.gameplay.hex import ResourceType
 from typing import TYPE_CHECKING, Union
@@ -9,12 +10,28 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class Bank:
-    def __init__(self, include_progress_cards: bool = True):
-        self.brick_cards = [ResourceCard(ResourceType.BRICK) for _ in range(19)]
-        self.wood_cards = [ResourceCard(ResourceType.WOOD) for _ in range(19)]
-        self.sheep_cards = [ResourceCard(ResourceType.SHEEP) for _ in range(19)]
-        self.wheat_cards = [ResourceCard(ResourceType.WHEAT) for _ in range(19)]
-        self.ore_cards = [ResourceCard(ResourceType.ORE) for _ in range(19)]
+    def __init__(
+        self,
+        include_progress_cards: bool = True,
+        parameters: GameParameters = DEFAULT_PARAMETERS,
+    ):
+        self.exchange_rate = parameters["bank_exchange_rate"]
+        self.num_cards_per_resource = parameters["num_cards_per_resource"]
+        self.brick_cards = [
+            ResourceCard(ResourceType.BRICK) for _ in range(self.num_cards_per_resource)
+        ]
+        self.wood_cards = [
+            ResourceCard(ResourceType.WOOD) for _ in range(self.num_cards_per_resource)
+        ]
+        self.sheep_cards = [
+            ResourceCard(ResourceType.SHEEP) for _ in range(self.num_cards_per_resource)
+        ]
+        self.wheat_cards = [
+            ResourceCard(ResourceType.WHEAT) for _ in range(self.num_cards_per_resource)
+        ]
+        self.ore_cards = [
+            ResourceCard(ResourceType.ORE) for _ in range(self.num_cards_per_resource)
+        ]
 
         self.dev_cards = [DevelopmentCard(CardType.KNIGHT) for _ in range(14)] + [
             DevelopmentCard(CardType.VICTORY_POINT) for _ in range(5)
@@ -73,6 +90,15 @@ class Bank:
             self.wheat_cards.append(card)
         if card.resourceType == ResourceType.ORE:
             self.ore_cards.append(card)
+
+    def resource_counts(self) -> dict[ResourceType, int]:
+        return {
+            ResourceType.BRICK: len(self.brick_cards),
+            ResourceType.WOOD: len(self.wood_cards),
+            ResourceType.SHEEP: len(self.sheep_cards),
+            ResourceType.WHEAT: len(self.wheat_cards),
+            ResourceType.ORE: len(self.ore_cards),
+        }
 
     def return_cards(self, cards: list[ResourceCard]) -> None:
         for card in cards:

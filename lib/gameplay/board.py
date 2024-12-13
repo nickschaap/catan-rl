@@ -1,8 +1,8 @@
 from lib.gameplay.hex import Hex, ResourceType, Edge, Vertex
-from lib.gameplay.pieces import Road, PieceType
+from lib.gameplay.pieces import Road, PieceType, Settlement
 from collections import deque
 
-from typing import TYPE_CHECKING, Set, Union
+from typing import TYPE_CHECKING, Set, Union, cast
 
 if TYPE_CHECKING:  # pragma: no cover
     from lib.gameplay.player import Player
@@ -101,6 +101,9 @@ class Board:
         self.hexes[18].attach_edges(get_edges(60, 65, 71, 70, 64, 59))
         self.hexes[18].attach_vertices(get_vertices(44, 45, 53, 52, 51, 43))
 
+    def get_desert(self) -> Hex:
+        return self.hexes[9]
+
     def place_settlement(self, player: "Player", vertexLoc: int) -> None:
         """Place a settlement at a vertex location"""
         if not self.can_settle(vertexLoc):
@@ -111,6 +114,14 @@ class Board:
             raise ValueError("No unplaced settlements available")
         vertex.attach_piece(settlement)
         settlement.set_vertex(vertex)
+
+    def can_place_city(self, player: "Player", vertexLoc: int) -> bool:
+        vertex = self.vertices[vertexLoc]
+        return (
+            vertex.piece is not None
+            and vertex.piece.player == player
+            and vertex.piece.type == PieceType.SETTLEMENT
+        )
 
     def place_city(self, player: "Player", vertexLoc: int) -> None:
         """Upgrade a settlement to a city"""
@@ -126,7 +137,7 @@ class Board:
             raise ValueError("No unplaced cities available")
         settlement = vertex.piece
         vertex.piece = None
-        settlement.position = None
+        cast(Settlement, settlement).set_vertex(None)
         vertex.attach_piece(city)
         city.set_vertex(vertex)
 
@@ -150,7 +161,9 @@ class Board:
     def get_hexes(self) -> list[Hex]:
         return self.hexes
 
-    def shortest_path(self, player: "Player", vertexLoc: int) -> list[Edge]:
+    def shortest_path(
+        self, player: "Player", vertexLoc: int
+    ) -> Union[list[Edge], None]:
         """Find shortest path of unoccupied edges from player's branch vertices to target vertex
 
         Args:
@@ -217,7 +230,7 @@ class Board:
                     prev_edge[next_vertex] = edge
                     queue.append((next_vertex, edge))
 
-        return []  # No path found
+        return None  # No path found
 
     def longest_road(self, player: "Player") -> int:
         player_roads = [road for road in player.roads if road.position is not None]

@@ -1,8 +1,11 @@
 import argparse
 import logging
 from lib.gameplay.game import Game
+from lib.logging.database import MongoLogger
+from lib.robot.robot import Robot
 from lib.visualizer.renderer import Renderer
 from lib.visualizer.action_graph_visualizer import ActionGraphVisualizer
+from typing import cast
 
 
 def parse_log_level(level_str: str) -> int:
@@ -92,6 +95,8 @@ def main():
 
     args = parser.parse_args()
 
+    MongoLogger.initialize()
+
     # Configure logger
     logger = logging.getLogger(__name__)
     logging.basicConfig(
@@ -109,7 +114,7 @@ def main():
     # Handle the 'play' command
     if args.command == "play":
         game = Game(num_players=args.num_players, game_delay=args.delay)
-        Renderer(game)
+        # Renderer(game)
         game.play()
     if args.command == "setup":
         logging.basicConfig(level=logging.INFO)
@@ -119,8 +124,11 @@ def main():
         if args.visualize:
             for player in game.players:
                 logger.info(f"Visualizing action graph for {player}")
+                if cast(Robot, player).action_graph is None:
+                    logger.warning(f"No action graph found for {player}")
+                    continue
                 action_graph_visualizer = ActionGraphVisualizer(
-                    player.action_graph,
+                    cast(Robot, player).action_graph,
                     game,
                     f"action_graph_{player.color}.html",
                 )
