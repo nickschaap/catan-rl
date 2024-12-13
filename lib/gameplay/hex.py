@@ -38,6 +38,9 @@ class HexPiece:
     def __hash__(self):
         return self.id
 
+    def get_hexes(self) -> list["Hex"]:
+        return list(self.hexes.keys())
+
     def attach_hex(self, hex: "Hex", loc: int):
         if hex not in self.hexes:
             self.hexes[hex] = loc
@@ -63,6 +66,12 @@ class Vertex(HexPiece):
                 break
         return list(edges)
 
+    def player_is_connected(self, player: Player) -> bool:
+        return any(
+            edge.piece is not None and edge.piece.player == player
+            for edge in self.connected_edges()
+        )
+
 
 class Edge(HexPiece):
     def __init__(self, id: int):
@@ -81,6 +90,36 @@ class Edge(HexPiece):
             return hex.vertices[hexLoc + 1]
         else:
             return hex.vertices[hexLoc - 1]
+
+    def connected_edges(self, player: Player) -> list[Edge]:
+        """Return all edges connected to this edge that are owned by the player or unowned."""
+        edges: Set[Edge] = set()
+        for vertex in self.vertices():
+            if vertex.piece is not None and vertex.piece.player != player:
+                # If the vertex is not owned by the player, skip it
+                continue
+            edges.update(
+                edge
+                for edge in vertex.connected_edges()
+                if (edge.piece is None or edge.piece.player == player) and edge != self
+            )
+        return list(edges)
+
+    def player_is_connected(self, player: Player) -> bool:
+        """Return all edges connected to this edge that are owned by the player"""
+        for vertex in self.vertices():
+            if vertex.piece is not None and vertex.piece.player != player:
+                # If the vertex is not owned by the player, skip it
+                continue
+
+            found = any(
+                edge.piece is not None and edge.piece.player == player
+                for edge in vertex.connected_edges()
+                if edge != self
+            )
+            if found:
+                return True
+        return False
 
     def vertices(self) -> list[Vertex]:
         return [self.north_neighbor(), self.south_neighbor()]
@@ -117,6 +156,23 @@ class Hex:
         if value < 2 or value > 12:
             raise ValueError("Invalid value")
         self.value = value
+
+    def likelihood(self) -> float:
+        if self.value is None:
+            return 0
+        if self.value in [2, 12]:
+            return 0.03
+        if self.value in [3, 11]:
+            return 0.06
+        if self.value in [4, 10]:
+            return 0.08
+        if self.value in [5, 9]:
+            return 0.11
+        if self.value in [6, 8]:
+            return 0.14
+        if self.value == 7:
+            return 0.17
+        raise ValueError("Invalid value")
 
     def attach_edges(self, edges: list[Edge]):
         if len(edges) != 6:

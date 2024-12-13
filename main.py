@@ -1,7 +1,11 @@
 import argparse
 import logging
 from lib.gameplay.game import Game
+from lib.logging.database import MongoLogger
+from lib.robot.robot import Robot
 from lib.visualizer.renderer import Renderer
+from lib.visualizer.action_graph_visualizer import ActionGraphVisualizer
+from typing import cast
 
 
 def parse_log_level(level_str: str) -> int:
@@ -46,8 +50,9 @@ def main():
         "--delay",
         "-d",
         type=float,
-        required=True,
-        help="Delay in seconds before starting the game.",
+        required=False,
+        default=0,
+        help="Delay in milliseconds between each turn",
     )
     play_parser.add_argument(
         "--num_players",
@@ -56,8 +61,15 @@ def main():
         default=4,
         help="Number of players in the game.",
     )
+    play_parser.add_argument(
+        "--log-level",
+        "-l",
+        type=parse_log_level,
+        default=logging.WARNING,  # Default level
+        help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
 
-    # Add 'play' subcommand
+    # Add 'setup' subcommand
     setup_parser = subparsers.add_parser("setup", help="Setup a game")
     setup_parser.add_argument(
         "--num_players",
@@ -66,8 +78,24 @@ def main():
         default=4,
         help="Number of players in the game.",
     )
+    setup_parser.add_argument(
+        "--log-level",
+        "-l",
+        type=parse_log_level,
+        default=logging.INFO,  # Default level
+        help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
+
+    # add the visualize boolean flag
+    setup_parser.add_argument(
+        "--visualize",
+        "-v",
+        help="Visualize the action graphs",
+    )
 
     args = parser.parse_args()
+
+    MongoLogger.initialize()
 
     # Configure logger
     logger = logging.getLogger(__name__)
@@ -86,12 +114,31 @@ def main():
     # Handle the 'play' command
     if args.command == "play":
         game = Game(num_players=args.num_players, game_delay=args.delay)
-        Renderer(game)
+        # Renderer(game)
         game.play()
     if args.command == "setup":
-        game = Game(num_players=args.num_players, game_delay=args.delay)
+        logging.basicConfig(level=logging.INFO)
+        game = Game(num_players=args.num_players, game_delay=0)
         renderer = Renderer(game)
         renderer.render()
+        if args.visualize:
+            for player in game.players:
+                logger.info(f"Visualizing action graph for {player}")
+                if cast(Robot, player).action_graph is None:
+                    logger.warning(f"No action graph found for {player}")
+                    continue
+                action_graph_visualizer = ActionGraphVisualizer(
+                    cast(Robot, player).action_graph,
+                    game,
+                    f"action_graph_{player.color}.html",
+                )
+                action_graph_visualizer.visualize()
+        print("Starting game...")
+        print("Press enter to step, or q to quit")
+        while True:
+            if input() == "q":
+                break
+            game.step()
 
 
 if __name__ == "__main__":

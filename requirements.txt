@@ -7,3 +7,7 @@ pyright
 ruff
 matplotlib
 argparse
+livereload
+flask
+pymongo
+pandas

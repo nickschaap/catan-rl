@@ -1,13 +1,16 @@
 from lib.gameplay.player import Player
+from lib.logging.database import MongoLogger
 from lib.robot.robot import Robot
 from lib.gameplay.bank import Bank
 from lib.gameplay.board import Board
 from lib.gameplay.hex import ResourceType
 from lib.gameplay.dice import Dice
+from lib.gameplay.params import DEFAULT_PARAMETERS, GameParameters
 from enum import Enum
 from typing import Callable, Union
 import logging
 import time
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -47,18 +50,33 @@ class GameEvent(Enum):
     BUILD_CITY = "BUILD_CITY"
     TRADE = "TRADE"
     END_TURN = "END_TURN"
+    START_TURN = "START_TURN"
 
 
 class Game:
-    def __init__(self, num_players: int = NUM_PLAYERS, game_delay: int = 0):
+    def __init__(
+        self,
+        num_players: int = NUM_PLAYERS,
+        game_delay: int = 0,
+        parameters: GameParameters = DEFAULT_PARAMETERS,
+        experiment_id: Union[str, None] = None,
+    ):
+        self.game_id = str(uuid.uuid4())
+        self.experiment_id = experiment_id
         self.current_player: int = 0
+        self.turn_number: int = 0
         self.winning_player: Union[Player, None] = None
-        self.bank = Bank()
+        self.bank = Bank(include_progress_cards=False)
         self.board = Board()
         self.dice = Dice()
-        self.players = self.setup_players(num_players)
         self.listeners = []
+        self.players = self.setup_players(num_players)
+        self.num_players = num_players
+
         self.game_delay = game_delay
+        self.player_with_largest_army: Union["Player", None] = None
+        self.player_with_longest_road: Union["Player", None] = None
+        self.parameters = parameters
 
     def listen(self, callback: Callable[[GameEvent], None]) -> None:
         self.listeners.append(callback)
@@ -70,7 +88,7 @@ class Game:
     def setup_players(self, num_players: int) -> list[Player]:
         players = []
         for i in range(num_players):
-            player = Robot(i, COLORS[i])
+            player = Robot(i, COLORS[i], self)
             players.append(player)
 
             for resource in INITIAL_PLACEMENTS[i]["resources"]:
@@ -93,24 +111,52 @@ class Game:
         raise ValueError("Player not found")
 
     def get_player_with_longest_road(self) -> Union[Player, None]:
-        player_with_longest_road = None
-        longest_road = 4
+        player_with_longest_road = self.player_with_longest_road
+
+        # Minimum length for longest road is greater than 4
+        longest_road = (
+            4
+            if player_with_longest_road is None
+            else self.board.longest_road(player_with_longest_road)
+        )
         for player in self.players:
+            if player == player_with_longest_road:
+                continue
             road_length = self.board.longest_road(player)
+            # Must be explicitly larger than the longest so far
             if road_length > longest_road:
                 player_with_longest_road = player
                 longest_road = road_length
-        return player_with_longest_road
+        self.player_with_longest_road = player_with_longest_road
+        return self.player_with_longest_road
 
-    def step(self):
-        curr_player = self.get_current_player()
-
+    def get_player_with_largest_army(self) -> Union[Player, None]:
+        player_with_largest_army = self.player_with_largest_army
+        # Minimum length for largest army is greater than 3
+        largest_army = (
+            2
+            if self.player_with_largest_army is None
+            else self.player_with_largest_army.largest_army_size()
+        )
         for player in self.players:
-            logger.info(
-                f"{player} has {player.points(self.players, self.get_player_with_longest_road())} points"
-            )
+            if player == player_with_largest_army:
+                continue
+            army_size = player.largest_army_size()
+            if army_size > largest_army:
+                player_with_largest_army = player
+                largest_army = army_size
+        self.player_with_largest_army = player_with_largest_army
+        return self.player_with_largest_army
+
+    def step(self) -> bool:
+        """Returns True if the game is over, False otherwise"""
+        curr_player = self.get_current_player()
+        for player in self.players:
+            logger.info(f"{player} has {player.points()} points")
 
         logger.info(f"{curr_player}'s turn")
+        self.notify(GameEvent.START_TURN)
+        curr_player.pre_roll(self.board, self.bank, self.players)
         self.dice.roll()
         self.notify(GameEvent.ROLL_DICE)
         logger.info(f"Dice roll: {self.dice.total}")
@@ -119,7 +165,7 @@ class Game:
             for player in self.players:
                 if len(player.resources) > 7:
                     player.split_cards(self.bank)
-            curr_player.rob(self.board, self.bank)
+            curr_player.move_robber(self.board, self.bank)
         else:
             for player in self.players:
                 logger.info(f"{player} has {len(player.resources)} resources")
@@ -128,31 +174,52 @@ class Game:
 
         self.notify(GameEvent.END_TURN)
 
-        if curr_player.points(self.players, self.get_player_with_longest_road()) >= 10:
+        if logger.isEnabledFor(logging.INFO):
+            for resource in ResourceType:
+                logger.info(
+                    f"{resource}: {sum(player.resource_counts()[resource] for player in self.players) + self.bank.resource_counts()[resource]}"
+                )
+            logger.info(
+                f"Development cards: {len(self.bank.dev_cards) + sum(len(player.development_cards) for player in self.players)}"
+            )
+
+        if curr_player.points() >= 10:
             self.winning_player = curr_player
 
-        self.current_player = (self.current_player + 1) % NUM_PLAYERS
+        self.current_player = (self.current_player + 1) % self.num_players
         if self.game_delay > 0:
             time.sleep(self.game_delay / 1000)
 
+        return self.winning_player is not None
+
     def play(self):
         self.notify(GameEvent.START_GAME)
-        self.current_player = 0
-        round_num = 0
+        self.turn_number = 0
 
-        while self.winning_player is None:
-            self.step()
-            # TODO: Implement end game condition
-            round_num += 1
-            if round_num == 300:
+        while not self.step():
+            self.turn_number += 1
+            if self.turn_number == 100 * self.num_players:
                 self.winning_player = self.get_current_player()
                 logger.warning("Game ended in a draw")
-        logger.info(f"{self.winning_player} wins in {round_num} rounds!")
+        logger.info(f"{self.winning_player} wins in {self.turn_number} turns!")
+
+        MongoLogger.log(
+            "game_logs",
+            {
+                "game_id": self.game_id,
+                "experiment_id": self.experiment_id
+                if self.experiment_id is not None
+                else "none",
+                "turn_number": self.turn_number,
+                "winning_player": self.winning_player.id
+                if self.winning_player is not None
+                else "none",
+                **self.parameters,
+            },
+        )
 
         for player in self.players:
-            logger.info(
-                f"{player} has {player.points(self.players, self.get_player_with_longest_road())} points"
-            )
+            logger.info(f"{player} has {player.points()} points")
             longest_road_player = self.get_player_with_longest_road()
             if longest_road_player is not None:
                 logger.info(f"{longest_road_player} has longest road")

@@ -1,4 +1,5 @@
 import pytest
+from lib.gameplay.game import Game
 from lib.gameplay.hex import Hex, Edge, Vertex, ResourceType
 from lib.gameplay.pieces import Settlement, Road
 from lib.gameplay.player import Player
@@ -57,11 +58,12 @@ def test_hex() -> None:
 
 @pytest.mark.hex
 def test_settlements() -> None:
+    game = Game()
     hex = Hex(1)
     vertex = Vertex(1)
 
     hex.attach_vertex(2, vertex)
-    vertex.attach_piece(Settlement(Player(1, "red")))
+    vertex.attach_piece(Settlement(Player(1, "red", game)))
 
     assert len(hex.get_settlements()) == 1
     settlements = hex.get_settlements()
@@ -118,6 +120,7 @@ def test_attach_vertices() -> None:
 
 @pytest.mark.hex
 def test_vertex() -> None:
+    game = Game()
     """Check that each of the properties match"""
     vertex = Vertex(1)
     vertex2 = Vertex(2)
@@ -146,8 +149,8 @@ def test_vertex() -> None:
     with pytest.raises(ValueError):
         vertex.attach_hex(hex4, 2)
 
-    settlement = Settlement(Player(1, "red"))
-    settlement2 = Settlement(Player(2, "blue"))
+    settlement = Settlement(Player(1, "red", game))
+    settlement2 = Settlement(Player(2, "blue", game))
 
     vertex.attach_piece(settlement)
     assert vertex.piece == settlement
@@ -158,6 +161,7 @@ def test_vertex() -> None:
 
 @pytest.mark.hex
 def test_edge() -> None:
+    game = Game()
     edge = Edge(1)
 
     assert edge.id == 1
@@ -177,8 +181,8 @@ def test_edge() -> None:
     with pytest.raises(ValueError):
         edge.attach_hex(hex3, 3)
 
-    road = Road(Player(1, "red"))
-    road1 = Road(Player(2, "blue"))
+    road = Road(Player(1, "red", game))
+    road1 = Road(Player(2, "blue", game))
     edge.attach_piece(road)
     assert edge.piece == road
 

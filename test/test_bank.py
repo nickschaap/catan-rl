@@ -1,6 +1,7 @@
 import pytest
 
 from lib.gameplay.bank import Bank
+from lib.gameplay.game import Game
 from lib.gameplay.hex import ResourceType
 from lib.gameplay.player import Player
 
@@ -57,7 +58,7 @@ def test_bank() -> None:
 @pytest.mark.bank
 def test_buy_settlement() -> None:
     bank = Bank()
-    player = Player(1, "red")
+    player = Player(1, "red", Game())
 
     player.resources = bank.get_cards(ResourceType.BRICK, ResourceType.WOOD)
 
@@ -84,7 +85,7 @@ def test_buy_settlement() -> None:
 @pytest.mark.bank
 def test_buy_road() -> None:
     bank = Bank()
-    player = Player(1, "red")
+    player = Player(1, "red", Game())
 
     player.resources = bank.get_cards(ResourceType.BRICK)
 
@@ -104,33 +105,56 @@ def test_buy_road() -> None:
 
 @pytest.mark.bank
 def test_buy_city() -> None:
-    bank = Bank()
-    player = Player(1, "red")
+    game = Game()
+    bank = game.bank
+    player = game.players[0]
 
-    player.resources = bank.get_cards(ResourceType.ORE)
+    resource_counts = player.resource_counts()
+
+    assert resource_counts[ResourceType.WOOD] == 2
+    assert resource_counts[ResourceType.WHEAT] == 1
+
+    initial_bank_wheat = len(bank.wheat_cards)
+    initial_bank_ore = len(bank.ore_cards)
 
     with pytest.raises(ValueError):
         bank.purchase_city(player)
 
-    assert len(player.resources) == 1
+    assert len(bank.wheat_cards) == initial_bank_wheat
+    assert len(bank.ore_cards) == initial_bank_ore
+
+    assert len(player.resources) == 3
 
     player.resources.extend(
         bank.get_cards(
-            ResourceType.WHEAT, ResourceType.WHEAT, ResourceType.ORE, ResourceType.ORE
+            ResourceType.WHEAT, ResourceType.ORE, ResourceType.ORE, ResourceType.ORE
         )
     )
 
+    assert player.resource_counts()[ResourceType.ORE] == 3
+    assert player.resource_counts()[ResourceType.WHEAT] == 2
+
+    assert len(player.resources) == 7
+    assert player.can_build_city()
+
+    initial_bank_wheat = len(bank.wheat_cards)
+    initial_bank_ore = len(bank.ore_cards)
+
     bank.purchase_city(player)
 
-    assert len(player.resources) == 0
-    assert len(bank.wheat_cards) == 19
-    assert len(bank.ore_cards) == 19
+    assert player.resource_counts()[ResourceType.ORE] == 0
+    assert player.resource_counts()[ResourceType.WHEAT] == 0
+    assert player.resource_counts()[ResourceType.WOOD] == 2
+
+    assert len(player.resources) == 2
+    assert len(bank.wheat_cards) == initial_bank_wheat + 2
+    assert len(bank.ore_cards) == initial_bank_ore + 3
 
 
 @pytest.mark.bank
 def test_buy_dev_card() -> None:
     bank = Bank()
-    player = Player(1, "red")
+    player = Player(1, "red", Game())
 
     player.resources = bank.get_cards(ResourceType.ORE)
 

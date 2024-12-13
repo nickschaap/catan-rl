@@ -1,6 +1,7 @@
 import pytest
 
 from lib.gameplay.board import Board
+from lib.gameplay.game import Game
 from lib.gameplay.player import Player
 from lib.gameplay.pieces import PieceType
 import random
@@ -8,6 +9,7 @@ import random
 
 @pytest.mark.board
 def test_board() -> None:
+    game = Game()
     board = Board()
 
     assert len(board.get_hexes()) == 19
@@ -16,8 +18,8 @@ def test_board() -> None:
 
     assert board.robberLoc == 9
 
-    player = Player(1, "red")
-    player2 = Player(2, "blue")
+    player = Player(1, "red", game)
+    player2 = Player(2, "blue", game)
 
     board.place_settlement(player, 1)
 
@@ -103,7 +105,7 @@ def test_traverse() -> None:
 def test_longest_road() -> None:
     def setup_road(*edgeLocs: int) -> int:
         board = Board()
-        player = Player(1, "red")
+        player = Player(1, "red", Game())
         random.shuffle(player.roads)
         for edgeLoc in edgeLocs:
             board.place_road(player, edgeLoc)
@@ -130,7 +132,7 @@ def test_longest_road() -> None:
 @pytest.mark.board
 def test_longest_road_multiplayer() -> None:
     def setup_board(options: dict[str, list[int]]) -> tuple[Board, Player, Player]:
-        player1, player2 = Player(1, "red"), Player(2, "blue")
+        player1, player2 = Player(1, "red", Game()), Player(2, "blue", Game())
         players = {"1": player1, "2": player2}
         board = Board()
         for player, edgeLocs in options.items():
@@ -157,7 +159,7 @@ def test_longest_road_multiplayer() -> None:
 @pytest.mark.board
 def test_can_settle() -> None:
     def setup_board() -> tuple[Board, Player, Player]:
-        player1, player2 = Player(1, "red"), Player(2, "blue")
+        player1, player2 = Player(1, "red", Game()), Player(2, "blue", Game())
         board = Board()
         return board, player1, player2
 
@@ -189,7 +191,7 @@ def test_can_settle() -> None:
 @pytest.mark.board
 def test_possible_settlements() -> None:
     def setup_board(*roads: int) -> tuple[Board, Player]:
-        player1 = Player(1, "red")
+        player1 = Player(1, "red", Game())
         board = Board()
         for road in roads:
             board.place_road(player1, road)
@@ -207,8 +209,10 @@ def test_possible_settlements() -> None:
 
 @pytest.mark.board
 def test_can_player_settle() -> None:
+    game = Game()
+
     def setup_board(*roads: int) -> tuple[Board, Player, Player]:
-        player1, player2 = Player(1, "red"), Player(2, "blue")
+        player1, player2 = Player(1, "red", game), Player(2, "blue", game)
         board = Board()
         for road in roads:
             board.place_road(player1, road)
@@ -223,8 +227,10 @@ def test_can_player_settle() -> None:
 
 @pytest.mark.board
 def test_move_robber() -> None:
+    game = Game()
+
     def setup_board(*roads: int) -> tuple[Board, Player]:
-        player1 = Player(1, "red")
+        player1 = Player(1, "red", game)
         board = Board()
         for road in roads:
             board.place_road(player1, road)
@@ -240,8 +246,10 @@ def test_move_robber() -> None:
 
 @pytest.mark.board
 def test_possible_branch_vertices() -> None:
+    game = Game()
+
     def setup_board(*roads: int) -> tuple[Board, Player]:
-        player1 = Player(1, "red")
+        player1 = Player(1, "red", game)
         board = Board()
         for road in roads:
             board.place_road(player1, road)
@@ -264,7 +272,7 @@ def test_possible_branch_vertices() -> None:
     ]
 
     board, player1 = setup_board(25, 26, 27, 65, 71)
-    player2 = Player(2, "blue")
+    player2 = Player(2, "blue", game)
     board.place_settlement(player2, 18)
     board.place_settlement(player2, 45)
     assert sorted(board.get_possible_branch_vertices(player1)) == [
@@ -277,8 +285,10 @@ def test_possible_branch_vertices() -> None:
 
 @pytest.mark.board
 def test_shortest_path() -> None:
+    game = Game()
+
     def setup_board(*roads: int) -> tuple[Board, Player]:
-        player1 = Player(1, "red")
+        player1 = Player(1, "red", game)
         board = Board()
         for road in roads:
             board.place_road(player1, road)
@@ -287,20 +297,23 @@ def test_shortest_path() -> None:
     board, player1 = setup_board(0, 1, 2, 3, 4, 5, 7)
 
     shortest_path = board.shortest_path(player1, 8)
+    assert shortest_path is not None
     assert len(shortest_path) == 1
     assert shortest_path[0].id == 6
 
     shortest_path = board.shortest_path(player1, 7)
+    assert shortest_path is not None
     assert len(shortest_path) == 2
     assert shortest_path[0].id == 6
     assert shortest_path[1].id == 10
 
-    player2 = Player(2, "blue")
+    player2 = Player(2, "blue", game)
     board.place_settlement(player2, 8)
     shortest_path = board.shortest_path(player1, 7)
+    assert shortest_path is not None
     assert len(shortest_path) == 5
 
     # Blocked
     board.place_settlement(player2, 17)
     shortest_path = board.shortest_path(player1, 17)
-    assert len(shortest_path) == 0
+    assert shortest_path is None

@@ -6,5 +6,5 @@ htmlcov/
 .DS_Store
 .vscode/
 current.svg
-output/
 .ruff_cache
+action_graph*.html

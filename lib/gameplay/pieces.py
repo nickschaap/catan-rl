@@ -52,6 +52,10 @@ class Settlement(Piece):
             self.position = None
         self.vertex = vertex
 
+    def get_resources(self) -> list[ResourceType]:
+        hexes = list(self.vertex.hexes if self.vertex is not None else [])
+        return [hex.resourceType for hex in hexes if hex.resourceType is not None]
+
     def get_points(self) -> int:
         if self.position is None:
             return 0
@@ -116,14 +120,21 @@ class CardType(Enum):
 class DevelopmentCard:
     def __init__(self, cardType: CardType):
         self.cardType = cardType
+        self.flipped = False
 
     def get_type(self) -> CardType:
         return self.cardType
+
+    def flip(self) -> None:
+        self.flipped = True
 
     def get_points(self) -> int:
         if self.cardType == CardType.VICTORY_POINT:
             return 1
         return 0
+
+    def __repr__(self):
+        return f"DevelopmentCard({self.cardType}, flipped={self.flipped})"
 
 
 class ResourceCard:
@@ -135,3 +146,6 @@ class ResourceCard:
 
     def __deepcopy__(self, _memo: dict[int, ResourceCard]) -> ResourceCard:
         return ResourceCard(self.resourceType)
+
+    def __repr__(self):
+        return f"ResourceCard({self.resourceType})"
