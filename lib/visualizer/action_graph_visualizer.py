@@ -29,8 +29,8 @@ class ActionGraphVisualizer:
             html += "<a href='/'>Back</a>"
             html += "<a href='/red'>Red</a>"
             html += "<a href='/blue'>Blue</a>"
-            html += "<a href='/orange'>Orange</a>"
             html += "<a href='/white'>White</a>"
+            html += "<a href='/orange'>Orange</a>"
             html += "</div>"
             html += f"<h1>Action Graph for {self.action_graph.player}</h1>"
             html += "<h2>Stats</h2>"
@@ -39,6 +39,6 @@ class ActionGraphVisualizer:
             html += "<ul>"
             actions = self.action_graph.get_post_roll_actions()
             for action in actions:
-                html += f"<li>{action}</li>"
+                html += f"<li style='color: {"green" if action.priority > 0 else "black"};'>{action}</li>"
             html += "</ul></body></html>"
             f.write(html)

@@ -44,6 +44,12 @@ class PlayerState:
             ],
             "Points": [self.player.points()],
             "Development Cards": [str(card) for card in self.player.development_cards],
+            "Has Longest Road": [
+                self.player.game.player_with_longest_road == self.player
+            ],
+            "Has Largest Army": [
+                self.player.game.player_with_largest_army == self.player
+            ],
         }
 
         state = "<ul>"

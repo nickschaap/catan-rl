@@ -2,9 +2,13 @@ from lib.gameplay.bank import Bank
 from lib.gameplay.board import Board
 from lib.gameplay.pieces import PieceType
 from lib.gameplay.player import Player
+from lib.operations.ops import normalize
 from lib.robot.action import Action
 from lib.robot.action_type import ActionType
 from typing import TYPE_CHECKING
+import logging
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from lib.gameplay.bank import Bank
@@ -47,13 +51,14 @@ class BuildRoad(Action):
         return len(self.shortest_path or [])
 
     def calculate_cost(self) -> float:
-        purchase_power = 1 / (1 + self.player_state.purchase_power[PieceType.ROAD])
-        cost = 2.0 * purchase_power
+        state = self.player_state
+        road_cost = 1 - state.purchase_power[PieceType.ROAD]
+        cost = road_cost
         if self.distance_to_road > 0:
             # Each road we need to build adds to the cost
             # Cost is exponential to prefer closer settlements
-            cost += 2.0 * (2**self.distance_to_road)
-        return cost * self.parameters["road_building_cost"]
+            cost += self.distance_to_road * road_cost
+        return normalize(self.parameters["road_building_cost"] * cost)
 
     def calculate_reward(self) -> float:
         """Road building rewards access to new building locations
@@ -75,9 +80,9 @@ class BuildRoad(Action):
             reward += max_settlement_priority
 
         if len(self.player.resources) > 7:
-            reward += 3.0
+            reward += self.parameters["road_building_when_abundant_resources"]
 
-        return reward * self.parameters["road_building_reward"]
+        return normalize(self.parameters["road_building_reward"] * reward)
 
     def can_execute(self, board: "Board", bank: "Bank", player: "Player") -> bool:
         return player.can_build_road_at_edge(self.edge.id, board)
@@ -85,7 +90,10 @@ class BuildRoad(Action):
     def execute(
         self, board: Board, bank: Bank, player: Player, players: list[Player]
     ) -> None:
+        logger.info(f"{player} building road at {self.edge.id}")
+        logger.info(f"{self.player} has abundant resources, building road")
         player.build_road(board, self.edge.id, bank)
+        self.executed = True
 
     def __str__(self) -> str:
         info = {

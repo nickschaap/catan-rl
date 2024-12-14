@@ -58,7 +58,7 @@ class Game:
         self,
         num_players: int = NUM_PLAYERS,
         game_delay: int = 0,
-        parameters: GameParameters = DEFAULT_PARAMETERS,
+        parameters: Union[GameParameters, list[GameParameters]] = DEFAULT_PARAMETERS,
         experiment_id: Union[str, None] = None,
     ):
         self.game_id = str(uuid.uuid4())
@@ -76,7 +76,12 @@ class Game:
         self.game_delay = game_delay
         self.player_with_largest_army: Union["Player", None] = None
         self.player_with_longest_road: Union["Player", None] = None
-        self.parameters = parameters
+        self.params = parameters
+
+    def parameters(self, player: Player) -> GameParameters:
+        if isinstance(self.params, list):
+            return self.params[player.id]
+        return self.params
 
     def listen(self, callback: Callable[[GameEvent], None]) -> None:
         self.listeners.append(callback)
@@ -172,6 +177,9 @@ class Game:
                 player.collect_resources(self.bank, self.dice.total)
         curr_player.take_turn(self.board, self.bank, self.players)
 
+        self.get_player_with_longest_road()
+        self.get_player_with_largest_army()
+
         self.notify(GameEvent.END_TURN)
 
         if logger.isEnabledFor(logging.INFO):
@@ -214,7 +222,7 @@ class Game:
                 "winning_player": self.winning_player.id
                 if self.winning_player is not None
                 else "none",
-                **self.parameters,
+                "parameters": self.params,
             },
         )
 

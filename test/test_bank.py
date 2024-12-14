@@ -3,6 +3,7 @@ import pytest
 from lib.gameplay.bank import Bank
 from lib.gameplay.game import Game
 from lib.gameplay.hex import ResourceType
+from lib.gameplay.params import DEFAULT_PARAMETERS
 from lib.gameplay.player import Player
 
 
@@ -10,11 +11,11 @@ from lib.gameplay.player import Player
 def test_bank() -> None:
     bank = Bank()
 
-    assert len(bank.brick_cards) == 19
-    assert len(bank.wood_cards) == 19
-    assert len(bank.wheat_cards) == 19
-    assert len(bank.sheep_cards) == 19
-    assert len(bank.ore_cards) == 19
+    assert len(bank.brick_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.wood_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.wheat_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.sheep_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.ore_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
 
     assert len(bank.dev_cards) == 25
 
@@ -23,28 +24,41 @@ def test_bank() -> None:
         assert card.get_type() == resource
 
         if resource == ResourceType.BRICK:
-            assert len(bank.brick_cards) == 18
+            assert (
+                len(bank.brick_cards)
+                == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
+            )
         elif resource == ResourceType.WOOD:
-            assert len(bank.wood_cards) == 18
+            assert (
+                len(bank.wood_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
+            )
         elif resource == ResourceType.WHEAT:
-            assert len(bank.wheat_cards) == 18
+            assert (
+                len(bank.wheat_cards)
+                == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
+            )
         elif resource == ResourceType.SHEEP:
-            assert len(bank.sheep_cards) == 18
+            assert (
+                len(bank.sheep_cards)
+                == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
+            )
         elif resource == ResourceType.ORE:
-            assert len(bank.ore_cards) == 18
+            assert (
+                len(bank.ore_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
+            )
 
         bank.return_card(card)
 
         if resource == ResourceType.BRICK:
-            assert len(bank.brick_cards) == 19
+            assert len(bank.brick_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
         elif resource == ResourceType.WOOD:
-            assert len(bank.wood_cards) == 19
+            assert len(bank.wood_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
         elif resource == ResourceType.WHEAT:
-            assert len(bank.wheat_cards) == 19
+            assert len(bank.wheat_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
         elif resource == ResourceType.SHEEP:
-            assert len(bank.sheep_cards) == 19
+            assert len(bank.sheep_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
         elif resource == ResourceType.ORE:
-            assert len(bank.ore_cards) == 19
+            assert len(bank.ore_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
 
     dev_card = bank.get_dev_card()
 
@@ -66,20 +80,20 @@ def test_buy_settlement() -> None:
         bank.purchase_settlement(player)
 
     assert len(player.resources) == 2
-    assert len(bank.brick_cards) == 18
-    assert len(bank.wood_cards) == 18
+    assert len(bank.brick_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
+    assert len(bank.wood_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
 
     player.resources.extend(bank.get_cards(ResourceType.WHEAT, ResourceType.SHEEP))
 
-    assert len(bank.wheat_cards) == 18
-    assert len(bank.sheep_cards) == 18
+    assert len(bank.wheat_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
+    assert len(bank.sheep_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"] - 1
 
     bank.purchase_settlement(player)
     assert len(player.resources) == 0
-    assert len(bank.wheat_cards) == 19
-    assert len(bank.sheep_cards) == 19
-    assert len(bank.brick_cards) == 19
-    assert len(bank.wood_cards) == 19
+    assert len(bank.wheat_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.sheep_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.brick_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.wood_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
 
 
 @pytest.mark.bank
@@ -99,8 +113,8 @@ def test_buy_road() -> None:
     bank.purchase_road(player)
 
     assert len(player.resources) == 0
-    assert len(bank.brick_cards) == 19
-    assert len(bank.wood_cards) == 19
+    assert len(bank.brick_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.wood_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
 
 
 @pytest.mark.bank
@@ -168,7 +182,7 @@ def test_buy_dev_card() -> None:
     bank.purchase_dev_card(player)
 
     assert len(player.resources) == 0
-    assert len(bank.sheep_cards) == 19
-    assert len(bank.wheat_cards) == 19
-    assert len(bank.ore_cards) == 19
+    assert len(bank.sheep_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.wheat_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
+    assert len(bank.ore_cards) == DEFAULT_PARAMETERS["num_cards_per_resource"]
     assert len(bank.dev_cards) == 24

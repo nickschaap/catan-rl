@@ -13,18 +13,28 @@ class GameParameters(TypedDict):
     play_development_card_cost_bias: float
     bank_exchange_rate: int
     num_cards_per_resource: int
+    play_development_card_reward: float
+    road_building_when_abundant_resources: float
+    development_card_reward_when_abundant_resources: float
 
 
+# Lower values decrease the cost
+# Lower values decrease the reward
 DEFAULT_PARAMETERS: GameParameters = {
-    "road_building_reward": 1.0,
-    "settlement_building_reward": 20.0,
-    "city_building_reward": 11.0,
-    "development_card_reward": 1.2,
-    "settlement_building_cost": 1.0,
-    "city_building_cost": 1.0,
-    "development_card_cost": 1.0,
-    "road_building_cost": 1.0,
+    # Player specific parameters
+    "road_building_reward": 4,
+    "settlement_building_reward": 3.2,
+    "city_building_reward": 2.6,
+    "development_card_reward": 1.6,
+    "settlement_building_cost": 0.2,
+    "city_building_cost": 1.6,
+    "development_card_cost": 0.8,
+    "road_building_cost": 0.4,
     "play_development_card_cost_bias": 0,
+    "play_development_card_reward": 2.0,
+    "road_building_when_abundant_resources": 0.1,  # possible values between 0.1 and 0.3
+    "development_card_reward_when_abundant_resources": 0.2,  # possible values between 0.1 and 0.3
+    # Applies to all players
     "bank_exchange_rate": 3,
-    "num_cards_per_resource": 19,
+    "num_cards_per_resource": 36,
 }

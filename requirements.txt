@@ -11,3 +11,4 @@ livereload
 flask
 pymongo
 pandas
+optuna
