@@ -46,7 +46,7 @@ class ActionGraph:
         self.road_actions = []
 
     def on_game_event(self, event: "GameEvent") -> None:
-        if str(event) == "GameEvent.START_TURN":
+        if str(event) == "GameEvent.START_TURN" or str(event) == "GameEvent.END_TURN":
             self.player_state.refresh_state()
 
     def log_actions(self, actions: list[Action]) -> None:
@@ -80,6 +80,7 @@ class ActionGraph:
                     "player_roads": [
                         str(road) for road in self.player.get_active_roads()
                     ],
+                    "executed": action.executed,
                 },
             )
 
@@ -91,7 +92,6 @@ class ActionGraph:
             if stage == "post_roll"
             else self.get_pre_roll_actions()
         )
-        self.log_actions(actions)
         for action in actions:
             num_resources = len(self.player.resources)
             if (action.priority > 0 or num_resources > 7) and action.can_execute(
@@ -100,12 +100,15 @@ class ActionGraph:
                 action.execute(
                     self.game.board, self.game.bank, self.player, self.game.players
                 )
+        self.log_actions(actions)
 
     def get_state(self) -> str:
         return str(self.player_state)
 
     def get_pre_roll_actions(self) -> list[Action]:
         player = self.player
+
+        actions = []
 
         robber_loc = self.game.board.robberLoc
         settled_hexes = player.get_settled_hexes()
@@ -121,8 +124,19 @@ class ActionGraph:
             for hex in settled_hexes
         ):
             # Player is blocked and has knights to play
-            return [PlayDevelopmentCard(unflipped_knights[0], self)]
-        return []
+            actions.append(PlayDevelopmentCard(unflipped_knights[0], self))
+
+        unflipped_victory_points = [
+            card
+            for card in player.development_cards
+            if card.cardType == CardType.VICTORY_POINT and card.flipped is False
+        ]
+
+        if len(unflipped_victory_points) > 0:
+            for card in unflipped_victory_points:
+                actions.append(PlayDevelopmentCard(card, self))
+
+        return actions
 
     def get_post_roll_actions(self) -> list[Action]:
         board = self.game.board

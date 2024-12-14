@@ -253,6 +253,9 @@ class Player:
             for hex in list(city.vertex.hexes if city.vertex is not None else []):
                 if hex.resourceType is not None:
                     counts[hex.resourceType] += 2 * hex.likelihood()
+
+        if counts[ResourceType.ORE] < 0.2:
+            counts[ResourceType.ORE] /= 2
         return counts
 
     def resource_importance(self) -> dict[ResourceType, float]:
@@ -411,7 +414,9 @@ class Player:
 
         if player_to_rob is not None:
             card = player_to_rob.rob()
+            logger.info(f"{self} robbed {player_to_rob} and moved robber to {hex.id}")
             if card is not None:
+                logger.info(f"{self} took 1 {card} from {player_to_rob}")
                 self.resources.append(card)
 
     def pre_roll(self, board: Board, bank: Bank, players: list["Player"]) -> None:

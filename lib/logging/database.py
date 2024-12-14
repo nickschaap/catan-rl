@@ -1,7 +1,7 @@
 import logging
 import pymongo
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,14 @@ class MongoLogger:
 
         except Exception as e:
             logger.error(f"Failed to log to MongoDB: {e}")
+
+    @classmethod
+    def get_orange_study(cls, study_name: str) -> Union[dict[str, Any], None]:
+        if cls._db is None:
+            logger.error("MongoDB not connected")
+            return {}
+
+        return cls._db["optimize_orange"].find_one({"study_name": study_name})
 
 
 # Example usage in the original code would become:

@@ -2,7 +2,6 @@ from lib.gameplay.hex import ResourceType
 from lib.gameplay.player import Player
 from lib.robot.action_graph import ActionGraph
 from typing import TYPE_CHECKING, Union
-import random
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,13 @@ class Robot(Player):
         if player_to_rob is None:
             return board.get_desert(), None
 
-        players_settled_hexes = player_to_rob.get_settled_hexes()
+        robber_loc = board.robberLoc
+
+        players_settled_hexes = [
+            hex
+            for hex in player_to_rob.get_settled_hexes()
+            if hex.id != robber_loc and self not in hex.get_settled_players()
+        ]
 
         # find the hex with the highest likelihood
         hex_to_rob = max(
@@ -57,21 +62,3 @@ class Robot(Player):
     def take_turn(self, board: "Board", bank: "Bank", players: list["Player"]) -> None:
         # Go through the action graph and execute the actions
         self.action_graph.execute_actions("post_roll")
-
-        resource_counts = self.resource_counts()
-        resource_rankings = self.rank_resource_values()
-        for resource, count in resource_counts.items():
-            while count >= 4:
-                try:
-                    resources_to_return = self.take_resources_from_player(
-                        [resource, resource, resource, resource]
-                    )
-                    for r in resources_to_return:
-                        bank.return_card(r)
-                    choice = next(r for r in resource_rankings if r != resource)
-
-                    self.resources.append(bank.get_card(choice))
-                    logger.info(f"{self} trading 4 {resource} for 1 {choice}")
-                    count -= 1
-                except ValueError:
-                    break

@@ -1,6 +1,7 @@
 import argparse
 import logging
 from lib.gameplay.game import Game
+from lib.gameplay.params import DEFAULT_PARAMETERS
 from lib.logging.database import MongoLogger
 from lib.robot.robot import Robot
 from lib.visualizer.renderer import Renderer
@@ -23,6 +24,12 @@ def main():
         "--experiment",
         type=lambda s: s.split(","),  # Split the input string by commas
         help="Comma-separated list of experiment names",
+    )
+    parser.add_argument(
+        "-s",
+        "--study-name",
+        type=str,
+        help="Name of the study to evaluate",
     )
 
     parser.add_argument(
@@ -109,16 +116,28 @@ def main():
                 from lib.experiments.win_stats import win_stats
 
                 win_stats(100)
+            elif experiment == "optimize_orange":
+                from lib.experiments.optimize_orange import optimize_orange
+
+                study_name = args.study_name
+
+                if study_name is not None:
+                    optimize_orange(100, mode="evaluate", study_name=study_name)
+                else:
+                    optimize_orange(1000)
             else:
                 logger.error(f"Unknown experiment: {experiment}")
+
     # Handle the 'play' command
     if args.command == "play":
         game = Game(num_players=args.num_players, game_delay=args.delay)
-        # Renderer(game)
+        Renderer(game)
         game.play()
     if args.command == "setup":
         logging.basicConfig(level=logging.INFO)
-        game = Game(num_players=args.num_players, game_delay=0)
+        game = Game(
+            num_players=args.num_players, game_delay=0, parameters=DEFAULT_PARAMETERS
+        )
         renderer = Renderer(game)
         renderer.render()
         if args.visualize:
@@ -135,10 +154,17 @@ def main():
                 action_graph_visualizer.visualize()
         print("Starting game...")
         print("Press enter to step, or q to quit")
-        while True:
-            if input() == "q":
-                break
-            game.step()
+        continue_game = False
+        while game.winning_player is None:
+            if not continue_game:
+                action = input()
+                if action == "q":
+                    break
+                if action == "c":
+                    continue_game = True
+                game.step()
+            else:
+                game.step()
 
 
 if __name__ == "__main__":

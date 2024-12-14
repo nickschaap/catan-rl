@@ -1,6 +1,7 @@
 from lib.gameplay.bank import Bank
 from lib.gameplay.board import Board
 from lib.gameplay.player import Player
+from lib.operations.ops import normalize
 from lib.robot.action_type import ActionType
 from lib.robot.action import Action
 from typing import TYPE_CHECKING
@@ -21,7 +22,9 @@ class BuyDevelopmentCard(Action):
         """Cost
         - The cost of the development card
         """
-        return 3.0 * self.parameters["development_card_cost"]
+        state = self.graph.player_state
+        cost = 1 - state.purchase_power["Development Card"]
+        return normalize(self.parameters["development_card_cost"] * cost)
 
     def calculate_reward(self) -> float:
         """Reward
@@ -30,18 +33,18 @@ class BuyDevelopmentCard(Action):
         - To move the robber if you are being blocked
 
         """
-        reward = 1.0
+        reward = 0
         robber_hex = self.board.hexes[self.board.robberLoc]
         player_state = self.player_state
         if self in robber_hex.get_settled_players():
             resource = robber_hex.resourceType
             if resource is not None:
-                reward += 2.0 * player_state.resource_importance[resource]
+                reward += player_state.resource_importance[resource]
 
         if len(self.player.resources) > 7:
-            reward += 3.0
+            reward += self.parameters["development_card_reward_when_abundant_resources"]
 
-        return reward * self.parameters["development_card_reward"]
+        return normalize(self.parameters["development_card_reward"] * reward)
 
     def can_execute(self, board: Board, bank: Bank, player: Player) -> bool:
         return player.can_buy_development_card()
@@ -51,3 +54,4 @@ class BuyDevelopmentCard(Action):
     ) -> None:
         logger.info(f"{player} buying development card")
         player.buy_development_card(bank)
+        self.executed = True

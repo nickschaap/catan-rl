@@ -15,6 +15,9 @@ class ResourceType(Enum):
     WHEAT = 4
     ORE = 5
 
+    def __repr__(self):
+        return f"{self.name}"
+
 
 class HexPieceType(Enum):
     VERTEX = 1

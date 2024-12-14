@@ -16,17 +16,13 @@ class Action:
         self.player = graph.player
         self.board = graph.game.board
         self.player_state = graph.player_state
-        self.parameters = graph.game.parameters
+        self.parameters = graph.game.parameters(self.player)
+        self.executed = False
 
     def initialize_calculations(self) -> None:
         self.cost = self.calculate_cost()
         self.reward = self.calculate_reward()
         self.priority = self.calculate_priority()
-        self.dependencies = self.calculate_dependencies()
-
-    def calculate_dependencies(self) -> list["Action"]:
-        # A dynamic list of actions that should be taken which minimize the cost of the action
-        return []
 
     def calculate_cost(self) -> float:
         """The direct cost of the action
@@ -42,7 +38,7 @@ class Action:
 
     def calculate_priority(self) -> float:
         """The priority of the action"""
-        return self.calculate_reward() - self.calculate_cost()
+        return self.reward - self.cost
 
     def can_execute(self, board: "Board", bank: "Bank", player: "Player") -> bool:
         return True
@@ -50,7 +46,7 @@ class Action:
     def execute(
         self, board: "Board", bank: "Bank", player: "Player", players: list["Player"]
     ) -> None:
-        pass
+        self.executed = True
 
     def __str__(self) -> str:
         info = {
